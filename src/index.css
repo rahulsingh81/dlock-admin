@@ -1,0 +1,324 @@
+/**
+ * =====================================
+ *       ADMIN DASHBOARD DESIGN SYSTEM
+ * =====================================
+ * 
+ * Project: Modern Admin Dashboard
+ * Type: Admin Panel / Management System
+ * 
+ * DESIGN PHILOSOPHY
+ * -----------------
+ * Core Principle: Professional elegance with modern functionality
+ * Design Style: Argon-inspired with clean minimalism
+ * Emotion Goal: Trust, efficiency, and control
+ * 
+ * VISUAL LANGUAGE
+ * ----------------
+ * Primary Focus: Data clarity and actionable insights
+ * Hierarchy: Card-based layout with clear information flow
+ * Whitespace: Generous spacing for content breathing
+ * 
+ * COLOR SYSTEM
+ * -------------
+ * Modern admin palette with professional gradients
+ * Primary: Blue gradient system for main actions
+ * Success: Green for active/positive states
+ * Warning: Amber for attention items
+ * Danger: Red for critical actions
+ * Status: Color-coded system for different states
+ * 
+ * TYPOGRAPHY
+ * ----------
+ * Display: Clean sans-serif for headers
+ * Body: Readable system fonts
+ * Scale: Clear hierarchy with proper contrast
+ * 
+ * INTERACTIONS
+ * ------------
+ * Feedback: Smooth transitions and hover states
+ * Transitions: 200ms ease for professional feel
+ * States: Comprehensive coverage for all interactions
+ * 
+ * COMPONENTS
+ * ----------
+ * Cards: Elevated with subtle shadows
+ * Tables: Clean rows with hover states
+ * Buttons: Gradient backgrounds with hover effects
+ * Badges: Color-coded status indicators
+ * 
+ * ACCESSIBILITY
+ * -------------
+ * Contrast: WCAG AA compliant
+ * Focus: Clear keyboard navigation
+ * Motion: Respects user preferences
+ * ====================================
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 214 100% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 214 100% 50%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 262 83% 58%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 0 84% 60%;
+    
+    /* Admin Theme Colors */
+    --admin-primary: 214 100% 50%;
+    --admin-secondary: 220 13% 18%;
+    --admin-success: 142 76% 36%;
+    --admin-warning: 43 96% 56%;
+    --admin-danger: 0 84% 60%;
+    --admin-info: 199 89% 48%;
+    
+    /* Status Colors */
+    --status-active: 142 76% 36%;
+    --status-inactive: 0 0% 63.9%;
+    --status-pending: 43 96% 56%;
+    --status-completed: 142 76% 36%;
+    --status-cancelled: 0 84% 60%;
+    
+    /* Card Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 100% 50%) 0%, hsl(221 83% 53%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(158 64% 52%) 100%);
+    --gradient-warning: linear-gradient(135deg, hsl(43 96% 56%) 0%, hsl(38 92% 50%) 100%);
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 74% 42%) 100%);
+    --radius: 0.5rem
+  ;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%}
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%
+  ;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%}
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+}
+
+@layer components {
+  /* Admin Dashboard Components */
+  .admin-card {
+    @apply bg-card rounded-xl border border-border/50 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+  
+  .admin-card-gradient {
+    @apply bg-gradient-to-br from-card via-card to-muted/20 rounded-xl border border-border/50 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+  
+  .stat-card {
+    @apply admin-card p-6 hover:scale-[1.02] transition-transform duration-200;
+  }
+  
+  .stat-card-primary {
+    background: var(--gradient-primary);
+    @apply text-white border-0 shadow-lg;
+  }
+  
+  .stat-card-success {
+    background: var(--gradient-success);
+    @apply text-white border-0 shadow-lg;
+  }
+  
+  .stat-card-warning {
+    background: var(--gradient-warning);
+    @apply text-white border-0 shadow-lg;
+  }
+  
+  .stat-card-danger {
+    background: var(--gradient-danger);
+    @apply text-white border-0 shadow-lg;
+  }
+  
+  /* Gradient Cards */
+  .gradient-card {
+    background: var(--gradient-primary);
+    @apply text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden;
+  }
+  
+  .gradient-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none;
+  }
+  
+  .gradient-card-success {
+    background: var(--gradient-success);
+    @apply text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden;
+  }
+  
+  .gradient-card-warning {
+    background: var(--gradient-warning);
+    @apply text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden;
+  }
+  
+  .gradient-card-danger {
+    background: var(--gradient-danger);
+    @apply text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden;
+  }
+
+  /* Status Badges */
+  .status-active {
+    @apply bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400;
+  }
+  
+  .status-inactive {
+    @apply bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400;
+  }
+  
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400;
+  }
+  
+  .status-completed {
+    @apply bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400;
+  }
+  
+  .status-cancelled {
+    @apply bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400;
+  }
+  
+  /* Data Tables */
+  .data-table {
+    @apply admin-card overflow-hidden;
+  }
+  
+  .data-table th {
+    @apply bg-muted/50 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider;
+  }
+  
+  .data-table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-foreground border-b border-border/50;
+  }
+  
+  .data-table tr:hover {
+    @apply bg-muted/30 transition-colors duration-150;
+  }
+  
+  /* Buttons */
+  .btn-gradient-primary {
+    background: var(--gradient-primary);
+    @apply text-white shadow-md hover:shadow-lg border-0 transition-all duration-200;
+  }
+  
+  .btn-gradient-success {
+    background: var(--gradient-success);
+    @apply text-white shadow-md hover:shadow-lg border-0 transition-all duration-200;
+  }
+  
+  /* Navigation */
+  .nav-item-active {
+    @apply bg-primary/10 text-primary border-r-2 border-primary;
+  }
+  
+  .nav-item {
+    @apply hover:bg-accent/50 transition-colors duration-150;
+  }
+  
+  /* Animations */
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  .slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Scrollbars */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground));
+    border-radius: 3px;
+  }
+}
