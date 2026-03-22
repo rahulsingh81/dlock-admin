@@ -60,35 +60,44 @@ export type OsSystem =
   | "Windows 2022 64"
   | "Windows 10 Pro"
   | "Windows 11 Pro";
+// types/index.ts or wherever your Plan type is defined
 
-// Plan Types
 export interface Plan {
-  _id?: string;
+  _id: string;
   name: string;
-  type: PlanType;
-  systemType : OSType;
-  ram: string;
-  storage: string;
-  cpu: string;
-  bandwidth: string;
-  price: number;
+  type: 'vps' | 'dedicated' | 'cloud' | 'forex';
+  location: 'india' | 'us';
+  windowsPrice: string;
+  linuxPrice: string;
+  systemType?: 'linux' | 'window'; // For compatibility with existing code
+  specs: {
+    cpu: string;
+    ram: string;
+    storage: string;
+    bandwidth: string;
+  };
   features: string[];
+  popular: boolean;
   status: 'active' | 'inactive';
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PlanFormData {
-  _id?: string;   
   name: string;
-  type: PlanType;
-  systemType: OSType;
-  ram: string;
-  storage: string;
-  cpu: string;
-  bandwidth: string;
-  price: number;
+  type: 'vps' | 'dedicated' | 'cloud' | 'forex';
+  location: 'india' | 'us';
+  windowsPrice: string;
+  linuxPrice: string;
+  systemType?: 'linux' | 'window';
+  specs: {
+    cpu: string;
+    ram: string;
+    storage: string;
+    bandwidth: string;
+  };
   features: string[];
+  popular: boolean;
   status: 'active' | 'inactive';
 }
 
