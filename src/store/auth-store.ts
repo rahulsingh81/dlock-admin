@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (credentials) => {
         try {
           set({ isLoading: true });
-          const res = await axios.post("https://dlockservices.com/api/admin/auth/login", credentials);
+          const res = await axios.post("http://localhost:5001/api/admin/auth/login", credentials);
 
           set({
             user: res.data.user,

@@ -8,7 +8,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
-  DialogDescription 
+  DialogDescription,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -33,7 +34,10 @@ import {
   ShieldCheck,
   ShieldX,
   Sparkles,
-  Star
+  Star,
+  CheckSquare,
+  Square,
+  Trash
 } from 'lucide-react';
 import { User, UserFormData, PaginationParams } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -261,6 +265,48 @@ const UserViewModal = ({ user, open, onOpenChange, onClearHighlight }: { user: U
     </Dialog>
   );
 };
+
+// Delete Confirmation Modal
+const DeleteConfirmationModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  userName,
+  isBulk = false,
+  count = 0
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void; 
+  userName?: string;
+  isBulk?: boolean;
+  count?: number;
+}) => (
+  <Dialog open={isOpen} onOpenChange={onClose}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Trash2 className="w-5 h-5 text-red-600" />
+          Confirm Delete
+        </DialogTitle>
+        <DialogDescription>
+          {isBulk 
+            ? `Are you sure you want to delete ${count} selected user${count !== 1 ? 's' : ''}? This action cannot be undone.`
+            : `Are you sure you want to delete user "${userName}"? This action cannot be undone.`
+          }
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter className="gap-2">
+        <Button variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="destructive" onClick={onConfirm}>
+          Delete
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
 
 // Move AddEditUserModal outside and make it a proper component
 const AddEditUserModal = ({ 
@@ -585,6 +631,11 @@ export default function UsersPage() {
   const { toast } = useToast();
   const usersPerPage = 10;
   
+  // Multiple selection states
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  
   // Use refs for debouncing to prevent layout thrashing
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const filterTimeoutRef = useRef<NodeJS.Timeout>();
@@ -650,6 +701,11 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers(true);
   }, []);
+
+  // Reset selection when page changes or filters change
+  useEffect(() => {
+    setSelectedUsers(new Set());
+  }, [currentPage, searchTerm, statusFilter, emailVerifiedFilter]);
 
   // Optimized debounced search
   useEffect(() => {
@@ -738,25 +794,93 @@ export default function UsersPage() {
     });
   }, [users, searchTerm, statusFilter, emailVerifiedFilter]);
 
-  const handleDelete = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-      return;
-    }
+  // Handle single user delete with confirmation modal
+  const handleDeleteClick = (userId: string, userName: string) => {
+    setUserToDelete({ id: userId, name: userName });
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
     
     try {
-      await deleteUser(userId);
+      await deleteUser(userToDelete.id);
       toast({
         title: "Success",
-        description: `User ${userName} has been deleted successfully`,
+        description: `User "${userToDelete.name}" has been deleted successfully`,
       });
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      fetchUsers(false);
+      // Remove from selected set if present
+      setSelectedUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userToDelete.id);
+        return newSet;
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || `Failed to delete user ${userToDelete.name}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    if (selectedUsers.size === 0) return;
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    const userIds = Array.from(selectedUsers);
+    const usersToDelete = users.filter(u => selectedUsers.has(u._id));
+    
+    try {
+      // Delete users one by one
+      const deletePromises = userIds.map(userId => deleteUser(userId));
+      await Promise.all(deletePromises);
+      
+      toast({
+        title: "Success",
+        description: `${selectedUsers.size} user${selectedUsers.size !== 1 ? 's' : ''} deleted successfully`,
+      });
+      
+      setShowDeleteModal(false);
+      setSelectedUsers(new Set());
       fetchUsers(false);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || `Failed to delete user ${userName}`,
+        description: error.message || "Failed to delete some users",
         variant: "destructive",
       });
     }
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectedUsers.size === filteredUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      const newSet = new Set<string>();
+      filteredUsers.forEach(user => newSet.add(user._id));
+      setSelectedUsers(newSet);
+    }
+  };
+
+  // Handle single user selection
+  const handleSelectUser = (userId: string) => {
+    setSelectedUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
   };
 
   const resetForm = () => {
@@ -975,11 +1099,46 @@ export default function UsersPage() {
             </div>
           ) : (
             <>
+              {/* Bulk Actions Bar */}
+              {selectedUsers.size > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">
+                      {selectedUsers.size} user{selectedUsers.size !== 1 ? 's' : ''} selected
+                    </span>
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    className="flex items-center gap-2"
+                  >
+                    <Trash className="w-4 h-4" />
+                    Delete Selected
+                  </Button>
+                </div>
+              )}
+
               {/* Users Table */}
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full">
                   <thead className="bg-slate-50">
                     <tr>
+                      <th className="text-left py-4 px-6 font-semibold text-slate-600">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSelectAll}
+                          className="p-0 hover:bg-transparent"
+                        >
+                          {selectedUsers.size === filteredUsers.length && filteredUsers.length > 0 ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Square className="w-5 h-5 text-slate-400" />
+                          )}
+                        </Button>
+                      </th>
                       <th className="text-left py-4 px-6 font-semibold text-slate-600">User</th>
                       <th className="text-left py-4 px-6 font-semibold text-slate-600">Contact Info</th>
                       <th className="text-left py-4 px-6 font-semibold text-slate-600">Status</th>
@@ -993,7 +1152,7 @@ export default function UsersPage() {
                   <tbody>
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="text-center py-12 text-slate-500">
+                        <td colSpan={9} className="text-center py-12 text-slate-500">
                           <div className="flex flex-col items-center space-y-3">
                             <Users className="w-12 h-12 text-slate-300" />
                             <div>
@@ -1007,6 +1166,7 @@ export default function UsersPage() {
                       filteredUsers.map((user) => {
                         const isNewToday = isToday(user.createdAt);
                         const isHighlighted = highlightedUserId === user._id;
+                        const isSelected = selectedUsers.has(user._id);
                         
                         return (
                           <tr 
@@ -1015,9 +1175,24 @@ export default function UsersPage() {
                               "border-t border-slate-100 transition-all duration-300",
                               "hover:bg-slate-50",
                               isNewToday && !isHighlighted && "bg-gradient-to-r from-yellow-50 to-orange-50 animate-pulse-slow",
-                              isHighlighted && "bg-gradient-to-r from-yellow-100 to-orange-100 shadow-inner"
+                              isHighlighted && "bg-gradient-to-r from-yellow-100 to-orange-100 shadow-inner",
+                              isSelected && "bg-blue-50"
                             )}
                           >
+                            <td className="py-4 px-6">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSelectUser(user._id)}
+                                className="p-0 hover:bg-transparent"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-5 h-5 text-blue-600" />
+                                ) : (
+                                  <Square className="w-5 h-5 text-slate-400" />
+                                )}
+                              </Button>
+                            </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center space-x-3">
                                 <div className="flex-shrink-0 relative">
@@ -1150,7 +1325,7 @@ export default function UsersPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
-                                  onClick={() => handleDelete(user._id, user.name)}
+                                  onClick={() => handleDeleteClick(user._id, user.name)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1195,6 +1370,19 @@ export default function UsersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setUserToDelete(null);
+        }}
+        onConfirm={userToDelete ? handleConfirmDelete : handleConfirmBulkDelete}
+        userName={userToDelete?.name}
+        isBulk={!userToDelete && selectedUsers.size > 0}
+        count={selectedUsers.size}
+      />
 
       {/* Add User Modal */}
       <AddEditUserModal
