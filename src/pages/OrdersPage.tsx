@@ -78,6 +78,7 @@ const OrdersPage = () => {
 
   const { toast } = useToast();
 
+  // Safe stats calculation with null checks
   const stats = {
     totalOrders: orders.length,
     activeOrders: orders.filter(o => o.orderStatus === 'active').length,
@@ -157,51 +158,52 @@ const OrdersPage = () => {
       });
     } else if (type === 'edit' && order) {
       setFormData({
-        customerId: order.userId._id,
-        planId: order.planId_id,
-        planName: order.planName,
-        planType: order.planType,
-        ram: order.ram,
-        storage: order.storage,
-        cpu: order.cpu,
-        ip: order.ip,
-        osType : order.osType,
-        os: order.os,
-        username: order.username,
-        password: order.password,
-        bandwidth: order.bandwidth,
-        basePrice: order.basePrice,
-        gstAmount: order.gstAmount,
-        totalPrice: order.totalPrice,
-        orderStatus: order.orderStatus,
-        paymentStatus: order.paymentStatus,
+        customerId: order.userId?._id || '',
+        planId: order.planId_id || '',
+        planName: order.planName || '',
+        planType: order.planType || 'vps',
+        ram: order.ram || '',
+        storage: order.storage || '',
+        cpu: order.cpu || '',
+        ip: order.ip || '',
+        osType : order.osType || '',
+        os: order.os || '',
+        username: order.username || '',
+        password: order.password || '',
+        bandwidth: order.bandwidth || '',
+        basePrice: order.basePrice || 0,
+        gstAmount: order.gstAmount || 0,
+        totalPrice: order.totalPrice || 0,
+        orderStatus: order.orderStatus || 'active',
+        paymentStatus: order.paymentStatus || 'unpaid',
         deliveryStatus: order.deliveryStatus || 'processing',
       });
     }
   };
 
   const osOptions = [
-  "Ubuntu 20 64",
-  "Ubuntu 22 64",
-  "Ubuntu 24 64",
-  "Debian 11 64",
-  "Debian 12 64",
-  "CentOS 7 64",
-  "CentOS 8 64",
-  "Alma 8 64",
-  "Alma 9 64",
-  "Rocky 9 64",
-  "Windows 2012 64",
-  "Windows 2016 64",
-  "Windows 2019 64",
-  "Windows 2022 64",
-  "Windows 10 Pro",
-  "Windows 11 Pro",
-];
-const osTypeOptions = [
-  "linux",
-  "window"
-]
+    "Ubuntu 20 64",
+    "Ubuntu 22 64",
+    "Ubuntu 24 64",
+    "Debian 11 64",
+    "Debian 12 64",
+    "CentOS 7 64",
+    "CentOS 8 64",
+    "Alma 8 64",
+    "Alma 9 64",
+    "Rocky 9 64",
+    "Windows 2012 64",
+    "Windows 2016 64",
+    "Windows 2019 64",
+    "Windows 2022 64",
+    "Windows 10 Pro",
+    "Windows 11 Pro",
+  ];
+  const osTypeOptions = [
+    "linux",
+    "window"
+  ];
+  
   const handleCloseModal = () => {
     setModalType(null);
     setSelectedOrder(null);
@@ -329,19 +331,19 @@ const osTypeOptions = [
   };
 
   const handleSendEmail = async (order) => {
-  try {
-    await sendEmail(order._id);  
-    toast({
-      title: "Email Sent ",
-      description: `Credentials sent to ${order.customerName || 'user'} (${order._id})`
-    });
-  } catch (err) {
-    toast({
-      title: "Email Failed ",
-      description: err.response?.data?.message || "Could not send email"
-    });
-  }
-};
+    try {
+      await sendEmail(order._id);  
+      toast({
+        title: "Email Sent ",
+        description: `Credentials sent to ${order.customerName || 'user'} (${order._id})`
+      });
+    } catch (err) {
+      toast({
+        title: "Email Failed ",
+        description: err.response?.data?.message || "Could not send email"
+      });
+    }
+  };
 
   const userOptions = users.map(user => ({
     value: user._id,
@@ -377,114 +379,115 @@ const osTypeOptions = [
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-  {/* Total Orders */}
-  <Card className="bg-gray-50">
-    <CardContent>
-      <div className="font-bold text-gray-700">Total Orders</div>
-      <div className="text-2xl font-extrabold text-gray-900">{orders.length}</div>
-    </CardContent>
-  </Card>
-  {/* Active Orders */}
-  <Card className="bg-green-50">
-    <CardContent>
-      <div className="font-bold text-green-700">Active Orders</div>
-      <div className="text-2xl font-extrabold text-green-900">
-        {orders.filter(o => o.orderStatus === "active").length}
+        {/* Total Orders */}
+        <Card className="bg-gray-50">
+          <CardContent>
+            <div className="font-bold text-gray-700">Total Orders</div>
+            <div className="text-2xl font-extrabold text-gray-900">{orders.length}</div>
+          </CardContent>
+        </Card>
+        {/* Active Orders */}
+        <Card className="bg-green-50">
+          <CardContent>
+            <div className="font-bold text-green-700">Active Orders</div>
+            <div className="text-2xl font-extrabold text-green-900">
+              {orders.filter(o => o.orderStatus === "active").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Inactive Orders */}
+        <Card className="bg-gray-100">
+          <CardContent>
+            <div className="font-bold text-gray-700">Inactive Orders</div>
+            <div className="text-2xl font-extrabold text-gray-900">
+              {orders.filter(o => o.orderStatus === "inactive").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Processing Orders */}
+        <Card className="bg-yellow-50">
+          <CardContent>
+            <div className="font-bold text-yellow-700">Processing Orders</div>
+            <div className="text-2xl font-extrabold text-yellow-900">
+              {orders.filter(o => o.deliveryStatus === "processing").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Delivered Orders */}
+        <Card className="bg-green-50">
+          <CardContent>
+            <div className="font-bold text-green-700">Delivered Orders</div>
+            <div className="text-2xl font-extrabold text-green-900">
+              {orders.filter(o => o.deliveryStatus === "delivered").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Cancelled Orders */}
+        <Card className="bg-red-50">
+          <CardContent>
+            <div className="font-bold text-red-700">Cancelled Orders</div>
+            <div className="text-2xl font-extrabold text-red-900">
+              {orders.filter(o => o.deliveryStatus === "cancel").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Paid Orders */}
+        <Card className="bg-green-100">
+          <CardContent>
+            <div className="font-bold text-green-700">Paid Orders</div>
+            <div className="text-2xl font-extrabold text-green-900">
+              {orders.filter(o => o.paymentStatus === "paid").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Unpaid Orders */}
+        <Card className="bg-yellow-100">
+          <CardContent>
+            <div className="font-bold text-yellow-700">Unpaid Orders</div>
+            <div className="text-2xl font-extrabold text-yellow-900">
+              {orders.filter(o => o.paymentStatus === "unpaid").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Refund Orders */}
+        <Card className="bg-blue-100">
+          <CardContent>
+            <div className="font-bold text-blue-700">Refund Orders</div>
+            <div className="text-2xl font-extrabold text-blue-900">
+              {orders.filter(o => o.paymentStatus === "refund").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* VPS Orders */}
+        <Card className="bg-purple-50">
+          <CardContent>
+            <div className="font-bold text-purple-700">VPS Orders</div>
+            <div className="text-2xl font-extrabold text-purple-900">
+              {orders.filter(o => o.planType === "vps").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Cloud Orders */}
+        <Card className="bg-blue-50">
+          <CardContent>
+            <div className="font-bold text-blue-700">Cloud Orders</div>
+            <div className="text-2xl font-extrabold text-blue-900">
+              {orders.filter(o => o.planType === "cloud").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Dedicated Orders */}
+        <Card className="bg-orange-50">
+          <CardContent>
+            <div className="font-bold text-orange-700">Dedicated Orders</div>
+            <div className="text-2xl font-extrabold text-orange-900">
+              {orders.filter(o => o.planType === "dedicated").length}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </CardContent>
-  </Card>
-  {/* Inactive Orders */}
-  <Card className="bg-gray-100">
-    <CardContent>
-      <div className="font-bold text-gray-700">Inactive Orders</div>
-      <div className="text-2xl font-extrabold text-gray-900">
-        {orders.filter(o => o.orderStatus === "inactive").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Processing Orders */}
-  <Card className="bg-yellow-50">
-    <CardContent>
-      <div className="font-bold text-yellow-700">Processing Orders</div>
-      <div className="text-2xl font-extrabold text-yellow-900">
-        {orders.filter(o => o.deliveryStatus === "processing").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Delivered Orders */}
-  <Card className="bg-green-50">
-    <CardContent>
-      <div className="font-bold text-green-700">Delivered Orders</div>
-      <div className="text-2xl font-extrabold text-green-900">
-        {orders.filter(o => o.deliveryStatus === "delivered").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Cancelled Orders */}
-  <Card className="bg-red-50">
-    <CardContent>
-      <div className="font-bold text-red-700">Cancelled Orders</div>
-      <div className="text-2xl font-extrabold text-red-900">
-        {orders.filter(o => o.deliveryStatus === "cancel").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Paid Orders */}
-  <Card className="bg-green-100">
-    <CardContent>
-      <div className="font-bold text-green-700">Paid Orders</div>
-      <div className="text-2xl font-extrabold text-green-900">
-        {orders.filter(o => o.paymentStatus === "paid").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Unpaid Orders */}
-  <Card className="bg-yellow-100">
-    <CardContent>
-      <div className="font-bold text-yellow-700">Unpaid Orders</div>
-      <div className="text-2xl font-extrabold text-yellow-900">
-        {orders.filter(o => o.paymentStatus === "unpaid").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Refund Orders */}
-  <Card className="bg-blue-100">
-    <CardContent>
-      <div className="font-bold text-blue-700">Refund Orders</div>
-      <div className="text-2xl font-extrabold text-blue-900">
-        {orders.filter(o => o.paymentStatus === "refund").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* VPS Orders */}
-  <Card className="bg-purple-50">
-    <CardContent>
-      <div className="font-bold text-purple-700">VPS Orders</div>
-      <div className="text-2xl font-extrabold text-purple-900">
-        {orders.filter(o => o.planType === "vps").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Cloud Orders */}
-  <Card className="bg-blue-50">
-    <CardContent>
-      <div className="font-bold text-blue-700">Cloud Orders</div>
-      <div className="text-2xl font-extrabold text-blue-900">
-        {orders.filter(o => o.planType === "cloud").length}
-      </div>
-    </CardContent>
-  </Card>
-  {/* Dedicated Orders */}
-  <Card className="bg-orange-50">
-    <CardContent>
-      <div className="font-bold text-orange-700">Dedicated Orders</div>
-      <div className="text-2xl font-extrabold text-orange-900">
-        {orders.filter(o => o.planType === "dedicated").length}
-      </div>
-    </CardContent>
-  </Card>
-</div>
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
         {/* Add your stats cards here if needed */}
       </div>
 
@@ -579,49 +582,45 @@ const osTypeOptions = [
                 <TableRow key={order._id}>
                   <TableCell>
                     <div className="font-medium">{order._id}</div>
-                    <div className="text-sm text-gray-500">{order.ip}</div>
+                    <div className="text-sm text-gray-500">{order.ip || 'No IP'}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{order.userId.name}</div>
-                    <div className="text-sm text-gray-500">{order.userId.email}</div>
+                    {/* Fixed: Added null check for userId */}
+                    <div className="font-medium">{order.userId?.name || 'Unknown User'}</div>
+                    <div className="text-sm text-gray-500">{order.userId?.email || 'No email'}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{order.planName}</div>
+                    <div className="font-medium">{order.planName || 'No Plan'}</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm space-y-1">
-                      <div>RAM: {order.ram}</div>
-                      <div>Storage: {order.storage}</div>
-                      <div>CPU: {order.cpu}</div>
+                      <div>RAM: {order.ram || 'N/A'}</div>
+                      <div>Storage: {order.storage || 'N/A'}</div>
+                      <div>CPU: {order.cpu || 'N/A'}</div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-semibold">${order.totalPrice}</div>
-                    <div className="text-xs text-gray-500">Base: ${order.basePrice} + GST: ${order.gstAmount}</div>
+                    <div className="font-semibold">${order.totalPrice || 0}</div>
+                    <div className="text-xs text-gray-500">Base: ${order.basePrice || 0} + GST: ${order.gstAmount || 0}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getTypeColor(order.planType)}>{order.planType.toUpperCase()}</Badge>
+                    <Badge className={getTypeColor(order.planType)}>{order.planType?.toUpperCase() || 'N/A'}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getPaymentColor(order.paymentStatus)}>{order.paymentStatus.toUpperCase()}</Badge>
+                    <Badge className={getPaymentColor(order.paymentStatus)}>{order.paymentStatus?.toUpperCase() || 'N/A'}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(order.orderStatus)}>{order.orderStatus.toUpperCase()}</Badge>
+                    <Badge className={getStatusColor(order.orderStatus)}>{order.orderStatus?.toUpperCase() || 'N/A'}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getDeliveryColor(order.deliveryStatus)}>{order.deliveryStatus.toUpperCase()}</Badge>
+                    <Badge className={getDeliveryColor(order.deliveryStatus)}>{order.deliveryStatus?.toUpperCase() || 'N/A'}</Badge>
                   </TableCell>
-                  {/* <TableCell>
-                    <Badge className={order.invoiceStatus === "generated" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                      {order.invoiceStatus === "generated" ? "Generated" : "Not Generated"}
-                    </Badge>
-                  </TableCell> */}
                   <TableCell>
                     <div className="flex space-x-2">
                       <Button variant="ghost" size="sm" onClick={() => handleOpenModal('view', order)}><Eye className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => handleOpenModal('edit', order)}><Edit className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => handleOpenModal('delete', order)}><Trash2 className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleSendEmail(order)}><Mail className="h-4 w-4" />Email</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleSendEmail(order)}><Mail className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -658,50 +657,50 @@ const osTypeOptions = [
                     <h4 className="font-semibold text-gray-900">Order Information</h4>
                     <div className="space-y-2">
                       <div className="flex justify-between"><span className="text-gray-600">Order ID:</span><span className="font-medium">{selectedOrder._id}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Plan:</span><span className="font-medium">{selectedOrder.planName}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Type:</span><Badge className={getTypeColor(selectedOrder.planType)}>{selectedOrder.planType.toUpperCase()}</Badge></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Order Status:</span><Badge className={getStatusColor(selectedOrder.orderStatus)}>{selectedOrder.orderStatus.toUpperCase()}</Badge></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Payment:</span><Badge className={getPaymentColor(selectedOrder.paymentStatus)}>{selectedOrder.paymentStatus.toUpperCase()}</Badge></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Delivery Status:</span><Badge className={getDeliveryColor(selectedOrder.deliveryStatus)}>{selectedOrder.deliveryStatus.toUpperCase()}</Badge></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Total Price:</span><span className="font-semibold">${selectedOrder.totalPrice}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Plan:</span><span className="font-medium">{selectedOrder.planName || 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Type:</span><Badge className={getTypeColor(selectedOrder.planType)}>{selectedOrder.planType?.toUpperCase() || 'N/A'}</Badge></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Order Status:</span><Badge className={getStatusColor(selectedOrder.orderStatus)}>{selectedOrder.orderStatus?.toUpperCase() || 'N/A'}</Badge></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Payment:</span><Badge className={getPaymentColor(selectedOrder.paymentStatus)}>{selectedOrder.paymentStatus?.toUpperCase() || 'N/A'}</Badge></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Delivery Status:</span><Badge className={getDeliveryColor(selectedOrder.deliveryStatus)}>{selectedOrder.deliveryStatus?.toUpperCase() || 'N/A'}</Badge></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Total Price:</span><span className="font-semibold">${selectedOrder.totalPrice || 0}</span></div>
                     </div>
                   </div>
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-900">Customer</h4>
                     <div className="space-y-2">
-                      <div className="flex justify-between"><span className="text-gray-600">Name:</span><span className="font-medium">{selectedOrder.userId.name}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Email:</span><span className="font-medium">{selectedOrder.userId.email}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Name:</span><span className="font-medium">{selectedOrder.userId?.name || 'Unknown'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Email:</span><span className="font-medium">{selectedOrder.userId?.email || 'No email'}</span></div>
                     </div>
                   </div>
                 </div>
-                 <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-6">
-                   <div>
-                  <h4 className="font-semibold text-gray-900 mb-4">Server Specifications</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex justify-between"><span className="text-gray-600">RAM:</span><span className="font-medium">{selectedOrder.ram}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">Storage:</span><span className="font-medium">{selectedOrder.storage}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">CPU:</span><span className="font-medium">{selectedOrder.cpu}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">Bandwidth:</span><span className="font-medium">{selectedOrder.bandwidth}</span></div>
-                     <div className="flex justify-between"><span className="text-gray-600">Os System:</span><Badge className={selectedOrder.os}>{selectedOrder.os.toUpperCase()}</Badge></div>
-                       <div className="flex justify-between"><span className="text-gray-600">Os Type:</span><Badge className={selectedOrder.osType}>{selectedOrder.osType.toUpperCase()}</Badge></div>
-                  </div>
-                </div>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-4">Server Specifications</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex justify-between"><span className="text-gray-600">RAM:</span><span className="font-medium">{selectedOrder.ram || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Storage:</span><span className="font-medium">{selectedOrder.storage || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">CPU:</span><span className="font-medium">{selectedOrder.cpu || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Bandwidth:</span><span className="font-medium">{selectedOrder.bandwidth || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Os System:</span><span className="font-medium">{selectedOrder.os?.toUpperCase() || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Os Type:</span><span className="font-medium">{selectedOrder.osType?.toUpperCase() || 'N/A'}</span></div>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-4 grid grid-cols-2 gap-4">
-                    <h4 className="font-semibold text-gray-900" >Server Details</h4>
-                    <div className="space-y-2 ">
-                      <div className="flex justify-between"><span className="text-gray-600">IP:</span><span className="font-medium font-mono">{selectedOrder.ip}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">User Name:</span><span className="font-medium font-mono">{selectedOrder.username}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">Password:</span><span className="font-medium font-mono">{selectedOrder.password}</span></div>
+                    <h4 className="font-semibold text-gray-900">Server Details</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between"><span className="text-gray-600">IP:</span><span className="font-medium font-mono">{selectedOrder.ip || 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">User Name:</span><span className="font-medium font-mono">{selectedOrder.username || 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Password:</span><span className="font-medium font-mono">{selectedOrder.password || 'N/A'}</span></div>
                     </div>
                   </div>
                 </div>
               
                 <div className="border-t pt-4">
                   <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                    <div className="flex justify-between"><span>Created:</span><span>{new Date(selectedOrder.createdAt).toLocaleString()}</span></div>
-                    <div className="flex justify-between"><span>Updated:</span><span>{new Date(selectedOrder.updatedAt).toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span>Created:</span><span>{selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString() : 'N/A'}</span></div>
+                    <div className="flex justify-between"><span>Updated:</span><span>{selectedOrder.updatedAt ? new Date(selectedOrder.updatedAt).toLocaleString() : 'N/A'}</span></div>
                   </div>
                 </div>
               </div>
@@ -719,7 +718,7 @@ const osTypeOptions = [
                 <div>
                   <Label>Customer</Label>
                   <SearchableSelect options={userOptions} value={formData.customerId} placeholder="Select customer..." onValueChange={handleUserSelect} searchPlaceholder="Search customers..." emptyMessage="No customers found" />
-                                  </div>
+                </div>
                 <div>
                   <Label>Plan</Label>
                   <SearchableSelect options={planOptions} value={formData.planId} placeholder="Select plan..." onValueChange={handlePlanSelect} searchPlaceholder="Search plans..." emptyMessage="No plans found" />
@@ -801,30 +800,6 @@ const osTypeOptions = [
                     placeholder="0.00"
                   />
                 </div>
-                {/* <div>
-                  <Label>GST Amount</Label>
-                  <Input
-                    type="number"
-                    value={formData.gstAmount === 0 ? '' : formData.gstAmount}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setFormData({ ...formData, gstAmount: val === '' ? 0 : safeParseFloat(val) });
-                    }}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <Label>Total Price</Label>
-                  <Input
-                    type="number"
-                    value={formData.totalPrice === 0 ? '' : formData.totalPrice}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setFormData({ ...formData, totalPrice: val === '' ? 0 : safeParseFloat(val) });
-                    }}
-                    placeholder="0.00"
-                  />
-                </div> */}
 
                 <div>
                   <Label>Order Status</Label>
@@ -868,7 +843,7 @@ const osTypeOptions = [
           {modalType === 'delete' && selectedOrder && (
             <div className="text-center py-4">
               <p>This action cannot be undone. This will permanently delete the order:</p>
-              <p className="font-semibold mt-2">{selectedOrder._id} - {selectedOrder.planName}</p>
+              <p className="font-semibold mt-2">{selectedOrder._id} - {selectedOrder.planName || 'No Plan'}</p>
             </div>
           )}
 

@@ -17,7 +17,7 @@ import IpPoolPage from "@/pages/IpPoolPage"
 function App() {
   return (
     <TooltipProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/admin">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
