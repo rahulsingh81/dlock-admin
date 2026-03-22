@@ -71,42 +71,6 @@ export const mockUsers: User[] = [
  
 ];
 
-// Mock Plans Data
-// export const mockPlans: Plan[] = [
-//   {
-//     _id: 'PLAN-001',
-//     name: 'Starter VPS',
-//     type: 'vps',
-//     ram: '4GB',
-//     storage: '128GB SSD',
-//     cpu: '2 vCPU',
-//     bandwidth: '1TB/month',
-//      systemType: 'linux', // Add this
-//     price: 19.99,
-//     features: ['99.9% Uptime', '24/7 Support', 'Free SSL', 'Daily Backups'],
-//     status: 'active',
-//     createdAt: '2024-01-01T00:00:00Z',
-//     updatedAt: '2024-01-01T00:00:00Z'
-//   },
-//   {
-//     _id: 'PLAN-002',
-//     name: 'Premium VPS',
-//     type: 'vps',
-//     ram: '8GB',
-//     storage: '256GB SSD',
-//     cpu: '4 vCPU',
-//     bandwidth: '2TB/month',
-//      systemType: 'linux', // Add this
-//     price: 29.99,
-//     features: ['99.9% Uptime', '24/7 Support', 'Free SSL', 'Daily Backups', 'DDoS Protection'],
-//     status: 'active',
-//     createdAt: '2024-01-01T00:00:00Z',
-//     updatedAt: '2024-01-01T00:00:00Z'
-//   },
- 
- 
-// ];
-
 // Mock Orders Data
 export const mockOrders: Order[] = [
     {
