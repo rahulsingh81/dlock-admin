@@ -94,11 +94,21 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProp
           <div className="absolute inset-0 bg-grid-black/[0.02] bg-[size:20px_20px]" />
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative z-10`}>
             {!isCollapsed && (
-              <div className="flex items-center space-x-2">
-                <Sparkles className="h-6 w-6 text-blue-600 animate-pulse" />
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  AdminHub
-                </h2>
+              <div className="flex items-center space-x-3">
+                {/* Logo from public folder */}
+                <img 
+                  src="/logo-dark.png" 
+                  alt="AdminHub Logo" 
+                  className="h-8 w-auto object-contain"
+                  onError={(e) => {
+                    // Fallback if logo doesn't load
+                    e.currentTarget.style.display = 'none';
+                    const sparkle = document.createElement('div');
+                    sparkle.innerHTML = '<svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>';
+                    e.currentTarget.parentElement?.prepend(sparkle.firstChild);
+                  }}
+                />
+              
               </div>
             )}
             <button
@@ -116,9 +126,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProp
               }
             </button>
           </div>
-          {!isCollapsed && (
-            <p className="text-xs text-gray-500 mt-2 relative z-10">Super Admin Portal</p>
-          )}
+          
         </div>
 
         {/* User info */}
@@ -140,19 +148,6 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProp
               </div>
               {showUserMenu ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
-            
-            {showUserMenu && (
-              <div className="absolute left-4 right-4 top-auto mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 animate-slideDown">
-                <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center space-x-2">
-                  <Settings size={14} />
-                  <span>Settings</span>
-                </button>
-                <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center space-x-2">
-                  <Crown size={14} />
-                  <span>Upgrade Plan</span>
-                </button>
-              </div>
-            )}
           </div>
         ) : (
           <div className="flex justify-center py-6 border-b border-gray-200/50">
