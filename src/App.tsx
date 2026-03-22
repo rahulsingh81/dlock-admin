@@ -41,6 +41,7 @@ function App() {
               <PlansPage />
             </DashboardLayout>
           } />
+          
           <Route path="/ips" element={
             <DashboardLayout>
               <IpPoolPage />
@@ -58,16 +59,19 @@ function App() {
               <ProfilePage />
             </DashboardLayout>
           } />
-           <Route path="/ticket" element={
+          
+          <Route path="/ticket" element={
             <DashboardLayout>
               <Ticket />
             </DashboardLayout>
           } />
+          
           <Route path="/live" element={
             <DashboardLayout>
               <LiveChat />
             </DashboardLayout>
           } />
+          
           {/* Fallback Routes */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
