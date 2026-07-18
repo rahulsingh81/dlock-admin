@@ -949,7 +949,8 @@ const OrdersPage = () => {
                   <tr key={order._id} className="border-t border-slate-100 transition-colors hover:bg-slate-50/60">
                     <td className="px-4 py-4"><SelectCheck ariaLabel="Select order" checked={bulk.selected.has(order._id)} onChange={() => bulk.toggle(order._id)} /></td>
                     <td className="px-6 py-4">
-                      <div className="font-mono text-xs font-medium text-slate-900">#{String(order._id).slice(-8)}</div>
+                      <div className="font-mono text-xs font-semibold text-slate-900">{order.orderNumber || `#${String(order._id).slice(-8)}`}</div>
+                      {order.invoiceNumber && <div className="font-mono text-[11px] text-slate-400">{order.invoiceNumber}</div>}
                       <div className="text-xs text-slate-500">{order.ip || '—'}</div>
                     </td>
                     <td className="px-6 py-4">
