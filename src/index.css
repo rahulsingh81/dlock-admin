@@ -58,6 +58,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================= DARK THEME OVERRIDES =================
+   The admin pages use fixed slate/white utilities. These remap the
+   common ones when `.dark` is active so the whole panel adapts. */
+.dark { color-scheme: dark; }
+.dark body { background-color: #0b1220; color: #e2e8f0; }
+
+/* surfaces */
+.dark .bg-white { background-color: #111827 !important; }
+.dark .bg-slate-100 { background-color: #1e293b !important; }
+.dark .bg-slate-50,
+.dark .bg-slate-50\/60,
+.dark .bg-slate-50\/40,
+.dark .bg-slate-50\/80 { background-color: #0f172a !important; }
+.dark .bg-blue-50\/40 { background-color: rgba(21,96,189,0.12) !important; }
+
+/* the main scroll area / layout bg */
+.dark .bg-slate-100.min-h-screen,
+.dark main { background-color: #0b1220 !important; }
+
+/* cards (shadcn Card uses bg-card var already, but ensure) */
+.dark .admin-card,
+.dark .card-hover { background-color: #111827; border-color: #1f2937 !important; }
+
+/* text */
+.dark .text-slate-900 { color: #f1f5f9 !important; }
+.dark .text-slate-800 { color: #e2e8f0 !important; }
+.dark .text-slate-700 { color: #cbd5e1 !important; }
+.dark .text-slate-600 { color: #b4c0d3 !important; }
+.dark .text-slate-500 { color: #94a3b8 !important; }
+.dark .text-slate-400 { color: #6b7a90 !important; }
+
+/* borders */
+.dark .border-slate-100 { border-color: #1e293b !important; }
+.dark .border-slate-200,
+.dark .border-slate-200\/80,
+.dark .border-slate-300 { border-color: #263041 !important; }
+
+/* table header + hovers */
+.dark thead.bg-slate-50 tr,
+.dark thead .bg-slate-50 { background-color: #0f172a !important; }
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-50\/60:hover,
+.dark .hover\:bg-slate-100:hover { background-color: #1e293b !important; }
+
+/* inputs & selects */
+.dark input, .dark textarea, .dark [role="combobox"], .dark .bg-slate-50 input {
+  background-color: #0f172a !important; color: #e2e8f0 !important; border-color: #263041 !important;
+}
+.dark input::placeholder, .dark textarea::placeholder { color: #64748b !important; }
+
+/* muted panels */
+.dark .bg-slate-50\/60 { background-color: #0f172a !important; }
+
+/* translucent white surfaces (navbar / sticky headers / dropdowns) */
+.dark .bg-white\/80,
+.dark .bg-white\/90,
+.dark .bg-white\/10 { background-color: rgba(17,24,39,0.9) !important; }
+.dark header { background-color: rgba(15,23,42,0.92) !important; border-color: #1f2937 !important; }
+
+/* Sidebar is already dark-themed — keep its white logo chip & active item white */
+.dark aside .bg-white { background-color: #ffffff !important; }
+.dark aside input { background-color: transparent !important; }
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -164,6 +227,10 @@
   /* Admin Dashboard Components */
   .admin-card {
     @apply bg-card rounded-xl border border-border/50 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply border border-slate-200/80 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg;
   }
   
   .admin-card-gradient {
@@ -303,6 +370,80 @@
     }
   }
   
+  /* ============ Auth / Login (animated) ============ */
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent;
+  }
+
+  .card-glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl;
+  }
+
+  .btn-primary {
+    @apply relative overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold shadow-lg shadow-purple-900/30 transition-all duration-300 hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-primary::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent;
+    transition: transform 0.7s ease;
+  }
+
+  .btn-primary:hover::after {
+    @apply translate-x-full;
+  }
+
+  /* Animated aurora blobs */
+  .auth-blob {
+    @apply absolute rounded-full blur-3xl opacity-40 pointer-events-none;
+    animation: blob 14s ease-in-out infinite;
+  }
+
+  /* Entrance helpers with stagger delays */
+  .anim-in {
+    opacity: 0;
+    animation: authIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.25s; }
+  .delay-3 { animation-delay: 0.4s; }
+  .delay-4 { animation-delay: 0.55s; }
+  .delay-5 { animation-delay: 0.7s; }
+
+  .float-slow { animation: floatY 6s ease-in-out infinite; }
+
+  /* Slow ken-burns zoom for background image */
+  .bg-kenburns { animation: kenBurns 24s ease-in-out infinite alternate; }
+
+  @keyframes kenBurns {
+    from { transform: scale(1) translate(0, 0); }
+    to   { transform: scale(1.12) translate(-1.5%, -1.5%); }
+  }
+
+  @keyframes authIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes blob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(30px, -40px) scale(1.1); }
+    66%      { transform: translate(-20px, 20px) scale(0.95); }
+  }
+
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmerText {
+    to { background-position: 200% center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .anim-in, .auth-blob, .float-slow, .bg-kenburns { animation: none; opacity: 1; }
+  }
+
   /* Scrollbars */
   .scrollbar-thin {
     scrollbar-width: thin;

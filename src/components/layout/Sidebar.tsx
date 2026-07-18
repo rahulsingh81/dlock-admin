@@ -1,25 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, Users, Server, Package, Ticket, MessageCircle, UserCog, LogOut, 
-  Menu, X, ChevronLeft, ChevronRight, Sparkles, Crown, Settings,
-  ChevronDown, ChevronUp
+import {
+  LayoutDashboard, Users, Server, Package, Ticket, UserCog, LogOut,
+  Menu, X, ChevronLeft, ChevronRight, Network, FileText, Newspaper, Wallet, Bell, Settings, TicketPercent, Code2, Mail, FileSpreadsheet, Database,
+  CalendarClock, BarChart3, Megaphone, KeyRound,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
+import { useConfirm } from '@/components/confirm-provider';
 import { Button } from '@/components/ui/button';
 
-const navigationItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, badge: null },
-  { name: 'Users', href: '/users', icon: Users, badge: null },
-  { name: 'Plans', href: '/plans', icon: Server, badge: null },
-  { name: 'Ip-Pool', href: '/ips', icon: Server, badge: null },
-  { name: 'Orders', href: '/orders', icon: Package, badge: null },
-  { name: 'Ticket System', href: '/ticket', icon: Ticket, badge: null },
-  { name: 'Live Chat', href: '/live', icon: MessageCircle, badge: null },
-  { name: 'Profile', href: '/profile', icon: UserCog, badge: null },
+const logoUrl = `${import.meta.env.BASE_URL}logo-dark.png`;
+
+const navGroups = [
+  {
+    label: 'Overview',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { name: 'Reports', href: '/reports', icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'Management',
+    items: [
+      { name: 'Users', href: '/users', icon: Users },
+      { name: 'Plans', href: '/plans', icon: Server },
+      { name: 'Ip-Pool', href: '/ips', icon: Network },
+      { name: 'Orders', href: '/orders', icon: Package },
+      { name: 'Renewals & Expiry', href: '/renewals', icon: CalendarClock },
+      { name: 'Transactions', href: '/transactions', icon: Wallet },
+      { name: 'CA Invoices', href: '/ca-invoices', icon: FileSpreadsheet },
+      { name: 'Coupons', href: '/coupons', icon: TicketPercent },
+    ],
+  },
+  {
+    label: 'Marketing',
+    items: [
+      { name: 'Email Campaigns', href: '/campaigns', icon: Megaphone },
+    ],
+  },
+  {
+    label: 'Development',
+    items: [
+      { name: 'Development', href: '/development', icon: Code2 },
+      { name: 'Developer API', href: '/developer', icon: KeyRound },
+    ],
+  },
+  {
+    label: 'Support',
+    items: [
+      { name: 'Ticket System', href: '/ticket', icon: Ticket },
+      { name: 'Enquiries', href: '/enquiries', icon: Mail },
+      { name: 'Blogs', href: '/blogs', icon: Newspaper },
+      { name: 'Legal Pages', href: '/content', icon: FileText },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { name: 'Notifications', href: '/notifications', icon: Bell },
+      { name: 'Database Backup', href: '/backup', icon: Database },
+      { name: 'Settings', href: '/settings', icon: Settings },
+      { name: 'Profile', href: '/profile', icon: UserCog },
+    ],
+  },
 ];
 
-// Add this interface
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -28,14 +73,24 @@ interface SidebarProps {
 export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProps = {}) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState(null);
   const { logout, user } = useAuthStore();
+  const confirm = useConfirm();
   const location = useLocation();
 
-  // Use external control if provided, otherwise use internal state
+  const handleLogout = async () => {
+    const ok = await confirm({
+      title: 'Sign out?',
+      description: 'You will be logged out of the admin panel.',
+      confirmText: 'Sign Out',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    logout();
+    toggleSidebar();
+  };
+
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
-  
+
   const toggleSidebar = () => {
     if (externalIsOpen !== undefined && onClose) {
       onClose();
@@ -54,19 +109,19 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProp
 
   return (
     <>
-      {/* Mobile Hamburger Button with animation */}
+      {/* Mobile Hamburger Button */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 p-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white lg:hidden focus:outline-none shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+        className="fixed top-4 left-4 z-50 rounded-xl bg-gradient-to-r from-[#1560BD] to-[#0d3a73] p-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none lg:hidden"
         aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
       >
         {isOpen ? <X size={22} /> : <Menu size={22} />}
       </button>
 
-      {/* Overlay for mobile with blur effect */}
+      {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden animate-fadeIn"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-fadeIn lg:hidden"
           onClick={toggleSidebar}
         />
       )}
@@ -74,204 +129,122 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProp
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full bg-gradient-to-b from-gray-50 to-white text-gray-800 shadow-2xl z-50
-          transform transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+          fixed left-0 top-0 z-50 flex h-screen flex-col
+          bg-gradient-to-b from-[#0d3a73] via-[#124f9c] to-[#0b2f5e] text-blue-50 shadow-2xl
+          transform transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0 lg:static lg:shadow-none
-          flex flex-col
-          h-screen
-          border-r border-gray-200/50
+          lg:static lg:translate-x-0
           ${isCollapsed ? 'w-20' : 'w-72'}
         `}
       >
+        {/* Decorative glow */}
+        <div className="pointer-events-none absolute -right-10 top-20 h-40 w-40 rounded-full bg-cyan-400/20 blur-3xl" />
+
         {/* Header */}
-        <div className={`
-          relative overflow-hidden
-          ${isCollapsed ? 'px-2 py-5' : 'px-6 py-5'}
-          border-b border-gray-200/50
-          bg-gradient-to-r from-blue-50 to-indigo-50
-        `}>
-          <div className="absolute inset-0 bg-grid-black/[0.02] bg-[size:20px_20px]" />
-          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative z-10`}>
-            {!isCollapsed && (
-              <div className="flex items-center space-x-3">
-                {/* Logo from public folder */}
-                <img 
-                  src="/logo-dark.png" 
-                  alt="AdminHub Logo" 
-                  className="h-8 w-auto object-contain"
-                  onError={(e) => {
-                    // Fallback if logo doesn't load
-                    e.currentTarget.style.display = 'none';
-                    const sparkle = document.createElement('div');
-                    sparkle.innerHTML = '<svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>';
-                    e.currentTarget.parentElement?.prepend(sparkle.firstChild);
-                  }}
-                />
-              
-              </div>
-            )}
-            <button
-              onClick={toggleCollapse}
-              className={`
-                p-2 rounded-xl hover:bg-white/80 transition-all duration-300 
-                hover:scale-110 hover:shadow-md group
-                ${isCollapsed ? 'mx-auto' : ''}
-              `}
-              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isCollapsed ? 
-                <ChevronRight size={20} className="group-hover:text-blue-600" /> : 
-                <ChevronLeft size={20} className="group-hover:text-blue-600" />
-              }
-            </button>
-          </div>
-          
+        <div className={`relative flex items-center gap-2 border-b border-white/10 ${isCollapsed ? 'justify-center px-2 py-5' : 'justify-between px-4 py-6'}`}>
+          {!isCollapsed && (
+            <div className="flex-1 rounded-xl bg-white px-4 py-3 shadow-md">
+              <img
+                src={logoUrl}
+                alt="DLock Services"
+                className="h-11 w-full object-contain"
+              />
+            </div>
+          )}
+          <button
+            onClick={toggleCollapse}
+            className={`rounded-lg p-2 text-blue-100 transition-all duration-300 hover:bg-white/10 hover:text-white ${isCollapsed ? 'mx-auto' : ''}`}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
         </div>
 
         {/* User info */}
-        {!isCollapsed ? (
-          <div className="relative px-4 py-5 border-b border-gray-200/50">
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-full flex items-center space-x-3 hover:bg-gray-50 rounded-xl p-2 transition-all duration-300 group"
-            >
-              <div className="relative">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-bold shadow-md group-hover:scale-105 transition-transform duration-300">
-                  {user?.name?.charAt(0).toUpperCase() || 'A'}
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-semibold text-gray-800">{user?.name || 'Admin User'}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email || 'admin@dashboard.com'}</p>
-              </div>
-              {showUserMenu ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-          </div>
-        ) : (
-          <div className="flex justify-center py-6 border-b border-gray-200/50">
+        <div className={`relative border-b border-white/10 ${isCollapsed ? 'flex justify-center py-5' : 'px-4 py-5'}`}>
+          <div className={`flex items-center ${isCollapsed ? '' : 'gap-3'}`}>
             <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-base font-bold shadow-md">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-lg font-bold text-white ring-1 ring-white/20 backdrop-blur">
                 {user?.name?.charAt(0).toUpperCase() || 'A'}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#124f9c] bg-emerald-400" />
             </div>
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-white">{user?.name || 'Admin User'}</p>
+                <p className="truncate text-xs text-blue-200/80">{user?.email || 'info@dlockservices.com'}</p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-1.5 custom-scrollbar">
-          {navigationItems.map(({ name, href, icon: Icon, badge }, idx) => (
-            <NavLink
-              key={name}
-              to={href}
-              onMouseEnter={() => setHoveredItem(name)}
-              onMouseLeave={() => setHoveredItem(null)}
-              className={({ isActive }) => `
-                group relative flex items-center rounded-xl text-sm font-medium transition-all duration-300
-                ${isCollapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'}
-                ${isActive 
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-[1.02]' 
-                  : 'text-gray-600 hover:bg-gray-100 hover:scale-[1.02] hover:text-blue-600'
-                }
-                ${hoveredItem === name && !isActive ? 'translate-x-1' : ''}
-              `}
-              style={{
-                transitionDelay: `${idx * 30}ms`,
-              }}
-              onClick={toggleSidebar}
-              title={isCollapsed ? name : ''}
-            >
-              <Icon className={`h-5 w-5 transition-transform duration-300 group-hover:scale-110 ${!isCollapsed && 'mr-3'}`} />
+        <nav className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-3 py-5">
+          {navGroups.map((group) => (
+            <div key={group.label}>
               {!isCollapsed && (
-                <>
-                  <span>{name}</span>
-                  {badge && (
-                    <span className={`
-                      ml-auto text-xs px-2 py-0.5 rounded-full font-semibold
-                      ${location.pathname === href 
-                        ? 'bg-white/20 text-white' 
-                        : 'bg-gray-100 text-gray-600'
+                <p className="mb-1.5 px-4 text-[11px] font-semibold uppercase tracking-wider text-blue-300/60">
+                  {group.label}
+                </p>
+              )}
+              {isCollapsed && <div className="mx-auto mb-2 h-px w-8 bg-white/10" />}
+              <div className="space-y-1">
+                {group.items.map(({ name, href, icon: Icon }) => (
+                  <NavLink
+                    key={name}
+                    to={href}
+                    className={({ isActive }) => `
+                      group relative flex items-center rounded-xl text-sm font-medium transition-all duration-200
+                      ${isCollapsed ? 'justify-center px-2 py-3' : 'px-4 py-2.5'}
+                      ${isActive
+                        ? 'bg-white text-[#0d3a73] shadow-lg shadow-black/10'
+                        : 'text-blue-100 hover:bg-white/10 hover:text-white'
                       }
-                    `}>
-                      {badge}
-                    </span>
-                  )}
-                </>
-              )}
-              {isCollapsed && badge && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
-                  {badge}
-                </span>
-              )}
-            </NavLink>
+                    `}
+                    onClick={toggleSidebar}
+                    title={isCollapsed ? name : ''}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && !isCollapsed && (
+                          <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-cyan-400" />
+                        )}
+                        <Icon className={`h-5 w-5 transition-transform duration-200 group-hover:scale-110 ${!isCollapsed && 'mr-3'}`} />
+                        {!isCollapsed && <span>{name}</span>}
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
         {/* Logout */}
-        <div className={`px-4 py-6 border-t border-gray-200/50 mt-auto ${isCollapsed ? 'px-2' : 'px-6'}`}>
+        <div className={`mt-auto border-t border-white/10 py-4 ${isCollapsed ? 'px-2' : 'px-4'}`}>
           <Button
             variant="ghost"
-            onClick={() => { logout(); toggleSidebar(); }}
+            onClick={handleLogout}
             className={`
-              w-full group relative overflow-hidden rounded-xl transition-all duration-300
-              ${isCollapsed ? 'justify-center px-2 py-3' : 'justify-start px-4 py-3'}
-              hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 hover:text-red-600
-              text-gray-600
+              group w-full rounded-xl text-blue-100 transition-all duration-200
+              hover:bg-red-500/20 hover:text-white
+              ${isCollapsed ? 'justify-center px-2 py-3' : 'justify-start px-4 py-2.5'}
             `}
             title={isCollapsed ? 'Sign Out' : ''}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
-            <LogOut className={`h-5 w-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 ${!isCollapsed && 'mr-3'}`} />
-            {!isCollapsed && (
-              <span className="font-medium group-hover:translate-x-1 transition-transform duration-300">
-                Sign Out
-              </span>
-            )}
+            <LogOut className={`h-5 w-5 transition-transform duration-200 group-hover:-translate-x-0.5 ${!isCollapsed && 'mr-3'}`} />
+            {!isCollapsed && <span className="font-medium">Sign Out</span>}
           </Button>
         </div>
       </aside>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        .animate-slideDown {
-          animation: slideDown 0.2s ease-out;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
-        }
-        .bg-grid-black\\/[0\\.02] {
-          background-image: linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px),
-                            linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px);
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
       `}</style>
     </>
   );

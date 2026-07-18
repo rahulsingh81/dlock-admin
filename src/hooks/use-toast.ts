@@ -180,7 +180,9 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+    // Must be [] — subscribing on every [state] change causes an infinite
+    // update loop ("Maximum update depth exceeded").
+  }, [])
 
   return {
     ...state,

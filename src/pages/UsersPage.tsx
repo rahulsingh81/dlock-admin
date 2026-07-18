@@ -2,15 +2,15 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetDescription,
+  SheetFooter
+} from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,8 +21,10 @@ import {
   UserCheck, 
   UserX, 
   Search, 
-  Plus, 
-  Eye, 
+  Plus,
+  Eye,
+  EyeOff,
+  Wand2,
   Edit, 
   Trash2,
   Package,
@@ -37,12 +39,26 @@ import {
   Star,
   CheckSquare,
   Square,
-  Trash
+  Trash,
+  LogIn,
+  Download,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { User, UserFormData, PaginationParams } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getUsers, createUser, updateUser, deleteUser } from '@/services/api';
-import { cn } from '@/lib/utils';
+import { getUsers, getUser, createUser, updateUser, deleteUser, impersonateUser, exportData } from '@/services/api';
+import { BulkBar, SelectCheck } from '@/components/bulk-bar';
+
+const WEB_URL = import.meta.env.VITE_WEB_URL || 'https://dlockservices.com';
+import { cn, formatDate } from '@/lib/utils';
 
 // Helper function to check if a date is today
 const isToday = (dateString?: string): boolean => {
@@ -56,65 +72,183 @@ const isToday = (dateString?: string): boolean => {
     date.getFullYear() === today.getFullYear();
 };
 
+// Soft, brand-cohesive tints for stat cards (no loud full-color gradients)
+const TONES: Record<string, { bg: string; text: string }> = {
+  blue:    { bg: 'bg-blue-50',    text: 'text-[#1560BD]' },
+  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600' },
+  rose:    { bg: 'bg-rose-50',    text: 'text-rose-500' },
+  indigo:  { bg: 'bg-indigo-50',  text: 'text-indigo-600' },
+  amber:   { bg: 'bg-amber-50',   text: 'text-amber-600' },
+};
+
 // Move StatsCard outside
-const StatsCard = ({ 
-  title, 
-  value, 
-  icon: Icon, 
-  gradient,
-  loading = false
+const StatsCard = ({
+  title,
+  value,
+  icon: Icon,
+  tone = 'blue',
+  loading = false,
 }: {
   title: string;
   value: string;
   icon: any;
-  gradient: string;
+  tone?: keyof typeof TONES;
   loading?: boolean;
-}) => (
-  <Card className="card-hover">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-slate-600">
-        {title}
-      </CardTitle>
-      <div className={`w-10 h-10 rounded-lg ${gradient} flex items-center justify-center`}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-    </CardHeader>
-    <CardContent>
-      {loading ? (
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-      ) : (
-        <div className="text-2xl font-bold text-slate-900 mb-1">{value}</div>
-      )}
-    </CardContent>
-  </Card>
-);
+}) => {
+  const t = TONES[tone] || TONES.blue;
+  return (
+    <Card className="card-hover">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.bg}`}>
+          <Icon className={`h-5 w-5 ${t.text}`} />
+        </div>
+        <div className="min-w-0">
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+          ) : (
+            <div className="text-xl font-bold leading-tight tabular-nums text-slate-900">{value}</div>
+          )}
+          <div className="truncate text-xs font-medium text-slate-500">{title}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // Move UserOrdersModal outside
-const UserOrdersModal = ({ user, open, onOpenChange }: { user: User; open: boolean; onOpenChange: (open: boolean) => void }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="max-w-4xl w-full">
-      <DialogHeader>
-        <DialogTitle className="flex items-center space-x-2">
-          <Package className="w-5 h-5" />
-          <span>Orders for {user.name}</span>
-          <Badge variant="secondary">{user.ordersCount || 0} orders</Badge>
-        </DialogTitle>
-        <DialogDescription>
-          View all orders placed by this user
-        </DialogDescription>
-      </DialogHeader>
-      
-      <div className="text-center py-8 text-slate-500">
-        Orders data will be displayed here when available.
-        <p className="text-sm mt-2">API integration needed for user orders.</p>
-      </div>
-    </DialogContent>
-  </Dialog>
-);
+const UserOrdersModal = ({ user, open, onOpenChange }: { user: User; open: boolean; onOpenChange: (open: boolean) => void }) => {
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const full: any = await getUser(user._id);
+        if (active) setOrders(full?.orders || []);
+      } catch {
+        if (active) setOrders([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [open, user._id]);
+
+  const inr = (n: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n || 0);
+  const fmt = (d?: Date | string | null) =>
+    d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  // Same logic as OrdersPage: expiry = start + duration months - 1 day; renew = expiry - 1 day
+  const computeDates = (o: any) => {
+    const start = o?.startDate ? new Date(o.startDate) : (o?.createdAt ? new Date(o.createdAt) : null);
+    let expiry: Date | null = null;
+    if (o?.endDate) {
+      expiry = new Date(o.endDate);
+    } else if (start) {
+      expiry = new Date(start);
+      expiry.setMonth(expiry.getMonth() + (o?.duration || 1));
+      expiry.setDate(expiry.getDate() - 1);
+    }
+    const renew = expiry ? new Date(expiry.getTime() - 86400000) : null;
+    return { start, renew, expiry };
+  };
+  const statusTone: Record<string, string> = {
+    active: 'bg-emerald-100 text-emerald-700',
+    delivered: 'bg-emerald-100 text-emerald-700',
+    paid: 'bg-emerald-100 text-emerald-700',
+    pending: 'bg-amber-100 text-amber-700',
+    suspended: 'bg-red-100 text-red-700',
+    terminated: 'bg-red-100 text-red-700',
+    expired: 'bg-slate-200 text-slate-600',
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto p-6 sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="flex items-center space-x-2">
+            <Package className="w-5 h-5" />
+            <span>Orders for {user.name}</span>
+            <Badge variant="secondary">{loading ? '…' : orders.length} orders</Badge>
+          </SheetTitle>
+          <SheetDescription>
+            View all orders placed by this user
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 space-y-3">
+          {loading ? (
+            <div className="py-10 text-center text-slate-500">Loading orders…</div>
+          ) : orders.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-slate-500">
+              <Package className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+              No orders placed yet.
+            </div>
+          ) : (
+            orders.map((o) => {
+              const { start, renew, expiry } = computeDates(o);
+              return (
+              <div
+                key={o._id}
+                onClick={() => { onOpenChange(false); navigate(`/orders?open=${o._id}`); }}
+                className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-[#1560BD]/40 hover:bg-blue-50/40"
+                title="Open this order"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-[#1560BD]">{o.planName || o.planType || 'Order'}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                      #{String(o._id).slice(-8)} · {o.location || '—'} · {o.os || o.osType || '—'}
+                    </p>
+                  </div>
+                  <span className={cn('shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize', statusTone[o.serviceStatus || o.orderStatus || o.deliveryStatus] || 'bg-slate-100 text-slate-600')}>
+                    {o.serviceStatus || o.orderStatus || o.deliveryStatus || 'pending'}
+                  </span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-slate-400">Amount</p>
+                    <p className="font-medium text-slate-900">{inr(o.totalPrice)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Qty × Duration</p>
+                    <p className="font-medium text-slate-900">{o.quantity || 1} × {o.duration || 1}mo</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Renews</p>
+                    <p className="font-medium text-slate-900">{o.renewCount ? `${o.renewCount}×` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Created</p>
+                    <p className="font-medium text-slate-900">{fmt(start)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-amber-600">Renew by</p>
+                    <p className="font-medium text-amber-600">{fmt(renew)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-red-500">Expires</p>
+                    <p className="font-medium text-red-600">{fmt(expiry)}</p>
+                  </div>
+                </div>
+              </div>
+              );
+            })
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
 
 // Move UserViewModal outside
-const UserViewModal = ({ user, open, onOpenChange, onClearHighlight }: { user: User; open: boolean; onOpenChange: (open: boolean) => void; onClearHighlight?: () => void }) => {
-  
+const UserViewModal = ({ user, open, onOpenChange, onClearHighlight, onLoginAs, impersonating }: { user: User; open: boolean; onOpenChange: (open: boolean) => void; onClearHighlight?: () => void; onLoginAs?: (user: User) => void; impersonating?: boolean }) => {
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen && onClearHighlight && isToday(user.createdAt)) {
       onClearHighlight();
@@ -123,50 +257,61 @@ const UserViewModal = ({ user, open, onOpenChange, onClearHighlight }: { user: U
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl w-full">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto p-6 sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="flex items-center space-x-2">
             <span>User Details</span>
             {isToday(user.createdAt) && (
-              <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 flex items-center gap-1">
+              <Badge className="bg-blue-100 text-[#1560BD] border-0 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 New Today
               </Badge>
             )}
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Detailed information about the user account
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            {user.avatar ? (
-              <img 
-                src={user.avatar} 
-                alt={user.name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
-            ) : (
-              <div className={cn(
-                "w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold",
-                isToday(user.createdAt) && "ring-4 ring-yellow-300 ring-offset-2"
-              )}>
-                {user.name.charAt(0).toUpperCase()}
+          {/* Gradient header banner */}
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#1560BD] to-[#0d3a73] p-5 text-white">
+            <div className="flex items-center gap-4">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="h-16 w-16 rounded-full object-cover ring-4 ring-white/30"
+                />
+              ) : (
+                <div className={cn(
+                  "flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-xl font-bold ring-4 ring-white/30 backdrop-blur",
+                  isToday(user.createdAt) && "ring-white/60"
+                )}>
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h3 className="flex items-center gap-2 text-xl font-semibold">
+                  <span className="truncate">{user.name}</span>
+                  {isToday(user.createdAt) && <Star className="h-5 w-5 fill-white/90 text-white/90" />}
+                </h3>
+                <p className="truncate text-blue-100">{user.email}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Badge className="border-0 bg-white/20 capitalize text-white">{user.role || 'user'}</Badge>
+                  <Badge className={cn('border-0 text-white', user.status === 'active' ? 'bg-emerald-500/80' : 'bg-red-500/80')}>
+                    {user.status}
+                  </Badge>
+                  <Badge className="border-0 bg-white/20 text-white">
+                    <Package className="mr-1 h-3 w-3" />
+                    {user.ordersCount || 0} orders
+                  </Badge>
+                </div>
               </div>
-            )}
-            <div>
-              <h3 className="text-xl font-semibold flex items-center gap-2">
-                {user.name}
-                {isToday(user.createdAt) && (
-                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                )}
-              </h3>
-              <p className="text-slate-600">{user.email}</p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-slate-600">
@@ -184,14 +329,54 @@ const UserViewModal = ({ user, open, onOpenChange, onClearHighlight }: { user: U
               <p className="text-slate-900 font-medium">{user.phone || 'N/A'}</p>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <div className="flex items-center space-x-2 text-slate-600">
                 <MapPin className="w-4 h-4" />
                 <span className="text-sm">Address</span>
               </div>
               <p className="text-slate-900">{user.address || 'N/A'}</p>
             </div>
-            
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-slate-600">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm">City</span>
+              </div>
+              <p className="text-slate-900 font-medium">{user.city || 'N/A'}</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-slate-600">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm">State</span>
+              </div>
+              <p className="text-slate-900 font-medium">{user.state || 'N/A'}</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-slate-600">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm">Zip Code</span>
+              </div>
+              <p className="text-slate-900 font-medium">{user.zipCode || 'N/A'}</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-slate-600">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm">Country</span>
+              </div>
+              <p className="text-slate-900 font-medium">{user.country || 'N/A'}</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-slate-600">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-sm">GSTIN</span>
+              </div>
+              <p className="font-medium text-slate-900">{user.gstin || 'N/A'}</p>
+            </div>
+
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-slate-600">
                 <Calendar className="w-4 h-4" />
@@ -199,10 +384,10 @@ const UserViewModal = ({ user, open, onOpenChange, onClearHighlight }: { user: U
               </div>
               <div className="flex items-center gap-2">
                 <p className="text-slate-900">
-                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                  {user.createdAt ? formatDate(user.createdAt, 'N/A') : 'N/A'}
                 </p>
                 {isToday(user.createdAt) && (
-                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                  <Badge variant="outline" className="bg-blue-50 text-[#1560BD] border-blue-200">
                     Today
                   </Badge>
                 )}
@@ -260,9 +445,31 @@ const UserViewModal = ({ user, open, onOpenChange, onClearHighlight }: { user: U
               </Badge>
             </div>
           </div>
+
+          {user.role !== 'admin' && onLoginAs && (
+            <div className="flex justify-end border-t pt-4">
+              <Button
+                onClick={() => onLoginAs(user)}
+                disabled={impersonating}
+                className="bg-[#1560BD] text-white hover:bg-[#124f9c]"
+              >
+                {impersonating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Opening…
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login as this user
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
@@ -282,30 +489,30 @@ const DeleteConfirmationModal = ({
   isBulk?: boolean;
   count?: number;
 }) => (
-  <Dialog open={isOpen} onOpenChange={onClose}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
+  <Sheet open={isOpen} onOpenChange={onClose}>
+    <SheetContent side="right" className="w-full p-6 sm:max-w-md">
+      <SheetHeader>
+        <SheetTitle className="flex items-center gap-2">
           <Trash2 className="w-5 h-5 text-red-600" />
           Confirm Delete
-        </DialogTitle>
-        <DialogDescription>
+        </SheetTitle>
+        <SheetDescription>
           {isBulk 
             ? `Are you sure you want to delete ${count} selected user${count !== 1 ? 's' : ''}? This action cannot be undone.`
             : `Are you sure you want to delete user "${userName}"? This action cannot be undone.`
           }
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="gap-2">
+        </SheetDescription>
+      </SheetHeader>
+      <SheetFooter className="mt-6 gap-2 border-t pt-4">
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
         <Button variant="destructive" onClick={onConfirm}>
           Delete
         </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+      </SheetFooter>
+    </SheetContent>
+  </Sheet>
 );
 
 // Move AddEditUserModal outside and make it a proper component
@@ -328,9 +535,21 @@ const AddEditUserModal = ({
   isSaving: boolean;
   handleSaveUser: () => Promise<void>;
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
+  }, [setFormData]);
+
+  const generatePassword = useCallback(() => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$';
+    let pw = '';
+    const arr = new Uint32Array(12);
+    (window.crypto || (window as any).msCrypto).getRandomValues(arr);
+    for (let i = 0; i < 12; i++) pw += chars[arr[i] % chars.length];
+    setFormData(prev => ({ ...prev, password: pw }));
+    setShowPassword(true);
   }, [setFormData]);
 
   const handleSelectChange = useCallback((field: string, value: string) => {
@@ -343,24 +562,25 @@ const AddEditUserModal = ({
   }, [setFormData]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-2xl w-full"
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="w-full overflow-y-auto p-6 sm:max-w-2xl"
         onInteractOutside={(e) => {
           if (isSaving) {
             e.preventDefault();
           }
         }}
       >
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit User' : 'Add New User'}</DialogTitle>
-          <DialogDescription>
+        <SheetHeader>
+          <SheetTitle>{isEdit ? 'Edit User' : 'Add New User'}</SheetTitle>
+          <SheetDescription>
             {isEdit ? 'Update user information' : 'Add a new user to the system'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         
         <form onSubmit={(e) => { e.preventDefault(); handleSaveUser(); }} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto px-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-1">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name *</Label>
               <Input
@@ -397,17 +617,37 @@ const AddEditUserModal = ({
 
             {!isEdit && (
               <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter password"
-                  className={validationErrors.password ? 'border-red-500' : ''}
-                  disabled={isSaving}
-                  autoComplete="new-password"
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password *</Label>
+                  <button
+                    type="button"
+                    onClick={generatePassword}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-[#1560BD] hover:underline"
+                  >
+                    <Wand2 className="h-3.5 w-3.5" /> Generate
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Set a password for this user"
+                    className={`pr-10 ${validationErrors.password ? 'border-red-500' : ''}`}
+                    disabled={isSaving}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    title={showPassword ? 'Hide' : 'Show'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400">Share this with the user for first login — they can change it later.</p>
                 {validationErrors.password && (
                   <p className="text-sm text-red-500">{validationErrors.password}</p>
                 )}
@@ -484,6 +724,17 @@ const AddEditUserModal = ({
                 placeholder="Country"
                 disabled={isSaving}
                 autoComplete="country-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gstin">GSTIN (Optional)</Label>
+              <Input
+                id="gstin"
+                value={formData.gstin}
+                onChange={handleInputChange}
+                placeholder="e.g. 22AAAAA0000A1Z5"
+                disabled={isSaving}
               />
             </div>
             
@@ -564,9 +815,9 @@ const AddEditUserModal = ({
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               type="submit"
-              className="btn-primary"
+              className="bg-[#1560BD] text-white hover:bg-[#124f9c]"
               disabled={isSaving}
             >
               {isSaving ? (
@@ -580,8 +831,8 @@ const AddEditUserModal = ({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
@@ -590,6 +841,8 @@ interface UsersResponse {
   totalCount: number;
   activeCount: number;
   inactiveCount: number;
+  verifiedCount: number;
+  newTodayCount: number;
   page: number;
   totalPages: number;
 }
@@ -599,7 +852,14 @@ export default function UsersPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [inactiveCount, setInactiveCount] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [verifiedCount, setVerifiedCount] = useState(0);
+  const [searchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  // keep search in sync when navbar navigates here with a new ?q=
+  useEffect(() => {
+    const urlQ = searchParams.get('q');
+    if (urlQ !== null) setSearchTerm(urlQ);
+  }, [searchParams]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [emailVerifiedFilter, setEmailVerifiedFilter] = useState<'all' | 'verified' | 'unverified'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -609,6 +869,7 @@ export default function UsersPage() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [highlightedUserId, setHighlightedUserId] = useState<string | null>(null);
   const [todayNewUsers, setTodayNewUsers] = useState<number>(0);
@@ -622,6 +883,7 @@ export default function UsersPage() {
     state: '',
     zipCode: '',
     country: '',
+    gstin: '',
     role: 'user',
     status: 'active',
     isEmailVerified: false
@@ -629,7 +891,8 @@ export default function UsersPage() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const usersPerPage = 10;
+  const [usersPerPage, setUsersPerPage] = useState(10);
+  const pageSizeFirstRun = useRef(true);
   
   // Multiple selection states
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
@@ -673,7 +936,8 @@ export default function UsersPage() {
         setTotalUsers(response.totalCount || 0);
         setActiveCount(response.activeCount || 0);
         setInactiveCount(response.inactiveCount || 0);
-        calculateTodayNewUsers(response.items);
+        setVerifiedCount(response.verifiedCount || 0);
+        setTodayNewUsers(response.newTodayCount || 0);
       } else if (Array.isArray(response)) {
         setUsers(response);
         setTotalUsers(response.length);
@@ -750,6 +1014,16 @@ export default function UsersPage() {
     }
   }, [currentPage]);
 
+  // Handle page-size (per page) changes
+  useEffect(() => {
+    if (pageSizeFirstRun.current) {
+      pageSizeFirstRun.current = false;
+      return;
+    }
+    setCurrentPage(1);
+    fetchUsers(false);
+  }, [usersPerPage]);
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
@@ -772,10 +1046,6 @@ export default function UsersPage() {
   };
 
   // Calculate verified count from current users
-  const verifiedCount = useMemo(() => {
-    return users.filter(user => user.isEmailVerified).length;
-  }, [users]);
-
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
       const matchesSearch = searchTerm === '' || 
@@ -894,6 +1164,7 @@ export default function UsersPage() {
       state: '',
       zipCode: '',
       country: '',
+      gstin: '',
       role: 'user',
       status: 'active',
       isEmailVerified: false
@@ -918,6 +1189,7 @@ export default function UsersPage() {
       state: user.state || '',
       zipCode: user.zipCode || '',
       country: user.country || '',
+      gstin: user.gstin || '',
       role: user.role || 'user',
       status: user.status || 'active',
       isEmailVerified: user.isEmailVerified || false  
@@ -938,6 +1210,39 @@ export default function UsersPage() {
   const handleViewOrders = (user: User) => {
     setSelectedUser(user);
     setShowOrdersModal(true);
+  };
+
+  // Login as this user (impersonate) - opens the client website signed in as them
+  const handleLoginAsUser = async (user: User) => {
+    if (user.role === 'admin') {
+      toast({
+        title: 'Not allowed',
+        description: 'You cannot log in as another admin.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setImpersonatingId(user._id);
+    try {
+      const res = await impersonateUser(user._id);
+      const { token, user: userData } = res;
+      // unicode-safe base64 encode of the user payload
+      const userB64 = btoa(unescape(encodeURIComponent(JSON.stringify(userData))));
+      const url = `${WEB_URL.replace(/\/$/, '')}/impersonate#token=${encodeURIComponent(token)}&user=${userB64}`;
+      window.open(url, '_blank', 'noopener');
+      toast({
+        title: 'Opening user session',
+        description: `Logging in as ${user.name} on the website…`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Failed',
+        description: error.message || 'Could not log in as this user',
+        variant: 'destructive',
+      });
+    } finally {
+      setImpersonatingId(null);
+    }
   };
 
   const handleClearHighlight = () => {
@@ -994,66 +1299,76 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold text-slate-900">Users Management</h1>
-        <p className="text-slate-600">Manage and monitor all user accounts and their activities</p>
-      </div>
-
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
         <StatsCard
           title="Total Users"
           value={totalUsers.toString()}
           icon={Users}
-          gradient="bg-gradient-to-r from-blue-500 to-blue-600"
+          tone="blue"
           loading={loading && users.length === 0}
         />
         <StatsCard
           title="Active Users"
           value={activeCount.toString()}
           icon={UserCheck}
-          gradient="bg-gradient-to-r from-green-500 to-green-600"
+          tone="emerald"
           loading={loading && users.length === 0}
         />
         <StatsCard
           title="Inactive Users"
           value={inactiveCount.toString()}
           icon={UserX}
-          gradient="bg-gradient-to-r from-red-500 to-red-600"
+          tone="rose"
           loading={loading && users.length === 0}
         />
         <StatsCard
           title="Verified Emails"
           value={verifiedCount.toString()}
           icon={ShieldCheck}
-          gradient="bg-gradient-to-r from-purple-500 to-purple-600"
+          tone="indigo"
           loading={loading && users.length === 0}
         />
         <StatsCard
           title="New Today"
           value={todayNewUsers.toString()}
           icon={Sparkles}
-          gradient="bg-gradient-to-r from-yellow-500 to-orange-500"
+          tone="amber"
           loading={loading && users.length === 0}
         />
       </div>
 
       {/* Filters and Controls */}
       <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <CardTitle>User List</CardTitle>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3">
+              <div className="relative w-full flex-1 sm:min-w-[240px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
                   placeholder="Search by name, email, phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
+                  className="pl-10 w-full"
                   autoComplete="off"
                 />
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="whitespace-nowrap">Rows</span>
+                <Select
+                  value={String(usersPerPage)}
+                  onValueChange={(v) => setUsersPerPage(Number(v))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <Select
@@ -1084,69 +1399,71 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
               
-              <Button className="btn-primary" onClick={handleAddUser}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="border-slate-200">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => exportData('users', 'excel')}>
+                    <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+                    Export as Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportData('users', 'csv')}>
+                    <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button className="bg-[#1560BD] text-white hover:bg-[#124f9c]" onClick={handleAddUser}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add User
               </Button>
-            </div>
           </div>
-        </CardHeader>
-        
-        <CardContent>
+        </CardContent>
+      </Card>
+
+      {/* Bulk Actions Bar */}
+      <BulkBar
+        count={selectedUsers.size}
+        noun="user"
+        onClear={() => setSelectedUsers(new Set())}
+        onDelete={handleBulkDelete}
+      />
+
+      {/* Users Table */}
+      <Card>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
             </div>
           ) : (
             <>
-              {/* Bulk Actions Bar */}
-              {selectedUsers.size > 0 && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckSquare className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">
-                      {selectedUsers.size} user{selectedUsers.size !== 1 ? 's' : ''} selected
-                    </span>
-                  </div>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={handleBulkDelete}
-                    className="flex items-center gap-2"
-                  >
-                    <Trash className="w-4 h-4" />
-                    Delete Selected
-                  </Button>
-                </div>
-              )}
-
               {/* Users Table */}
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <div className="overflow-x-auto rounded-lg">
                 <table className="w-full">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSelectAll}
-                          className="p-0 hover:bg-transparent"
-                        >
-                          {selectedUsers.size === filteredUsers.length && filteredUsers.length > 0 ? (
-                            <CheckSquare className="w-5 h-5 text-blue-600" />
-                          ) : (
-                            <Square className="w-5 h-5 text-slate-400" />
-                          )}
-                        </Button>
+                      <th className="px-4 py-3.5 w-10">
+                        <SelectCheck
+                          ariaLabel="Select all users"
+                          checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                          indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredUsers.length}
+                          onChange={handleSelectAll}
+                        />
                       </th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">User</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Contact Info</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Status</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Verification</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Role</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Orders</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Joined Date</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Actions</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Contact Info</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Address</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Verification</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Orders</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Joined Date</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1174,24 +1491,17 @@ export default function UsersPage() {
                             className={cn(
                               "border-t border-slate-100 transition-all duration-300",
                               "hover:bg-slate-50",
-                              isNewToday && !isHighlighted && "bg-gradient-to-r from-yellow-50 to-orange-50 animate-pulse-slow",
-                              isHighlighted && "bg-gradient-to-r from-yellow-100 to-orange-100 shadow-inner",
+                              isNewToday && !isHighlighted && "bg-blue-50/40",
+                              isHighlighted && "bg-blue-50",
                               isSelected && "bg-blue-50"
                             )}
                           >
-                            <td className="py-4 px-6">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleSelectUser(user._id)}
-                                className="p-0 hover:bg-transparent"
-                              >
-                                {isSelected ? (
-                                  <CheckSquare className="w-5 h-5 text-blue-600" />
-                                ) : (
-                                  <Square className="w-5 h-5 text-slate-400" />
-                                )}
-                              </Button>
+                            <td className="px-4 py-4">
+                              <SelectCheck
+                                ariaLabel="Select user"
+                                checked={isSelected}
+                                onChange={() => handleSelectUser(user._id)}
+                              />
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center space-x-3">
@@ -1202,77 +1512,64 @@ export default function UsersPage() {
                                       alt={user.name}
                                       className={cn(
                                         "w-10 h-10 rounded-full object-cover",
-                                        isNewToday && "ring-2 ring-yellow-400 ring-offset-2"
+                                        isNewToday && "ring-2 ring-[#1560BD]/40 ring-offset-2"
                                       )}
                                     />
                                   ) : (
                                     <div className={cn(
-                                      "w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold",
-                                      isNewToday && "ring-2 ring-yellow-400 ring-offset-2"
+                                      "w-10 h-10 rounded-full bg-gradient-to-br from-[#1560BD] to-[#0d3a73] flex items-center justify-center text-white font-semibold",
+                                      isNewToday && "ring-2 ring-[#1560BD]/40 ring-offset-2"
                                     )}>
                                       {user.name?.charAt(0).toUpperCase()}
                                     </div>
                                   )}
-                                  {isNewToday && !isHighlighted && (
-                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                                  {isNewToday && (
+                                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-[#1560BD] px-1.5 py-0.5 text-[9px] font-semibold leading-none text-white shadow ring-2 ring-white">
+                                      new
                                     </span>
                                   )}
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-slate-900 flex items-center gap-2">
+                                  <div className="font-semibold text-slate-900">
                                     {user.name}
-                                    {isNewToday && (
-                                      <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs px-1.5 py-0">
-                                        <Sparkles className="w-3 h-3 mr-1" />
-                                        New
-                                      </Badge>
-                                    )}
                                   </div>
-                                  <div className="text-sm text-slate-500 truncate max-w-32">{user.email}</div>
                                 </div>
                               </div>
                             </td>
                             <td className="py-4 px-6">
                               <div className="space-y-1">
-                                <div className="text-sm">
-                                  <span className="text-slate-500">Phone:</span>{' '}
-                                  <span className="font-medium">{user.phone || 'N/A'}</span>
-                                </div>
-                                <div className="text-sm text-slate-600 truncate max-w-48">
-                                  {user.address || 'No address'}
-                                </div>
+                                <div className="text-sm text-slate-700 truncate max-w-48">{user.email}</div>
+                                <div className="text-sm text-slate-500">{user.phone || '—'}</div>
                               </div>
                             </td>
                             <td className="py-4 px-6">
-                              <Badge 
-                                variant="secondary"
-                                className={
-                                  user.status === 'active' 
-                                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                    : 'bg-red-100 text-red-800 hover:bg-red-200'
-                                }
-                              >
+                              {(() => {
+                                const line = [user.city, user.state, user.country].filter(Boolean).join(', ');
+                                return (
+                                  <div className="space-y-1 max-w-56">
+                                    <div className="text-sm text-slate-700 truncate">{user.address || '—'}</div>
+                                    {line && <div className="text-xs text-slate-500 truncate">{line}</div>}
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize",
+                                user.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                              )}>
+                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
                                 {user.status}
-                              </Badge>
+                              </span>
                             </td>
                             <td className="py-4 px-6">
-                              <Badge 
-                                variant="secondary"
-                                className={
-                                  user.isEmailVerified 
-                                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                    : 'bg-red-100 text-red-800 hover:bg-red-200'
-                                }
-                              >
-                                {user.isEmailVerified ? 'Verified' : 'Not Verified'}
-                              </Badge>
-                            </td>
-                            <td className="py-4 px-6">
-                              <Badge variant="secondary">
-                                {user.role || 'user'}
-                              </Badge>
+                              <span className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+                                user.isEmailVerified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                              )}>
+                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                                {user.isEmailVerified ? 'Verified' : 'Unverified'}
+                              </span>
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center space-x-2">
@@ -1288,48 +1585,50 @@ export default function UsersPage() {
                               </div>
                             </td>
                             <td className="py-4 px-6">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-slate-600">
-                                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-                                </span>
-                                {isNewToday && (
-                                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
-                                    Today
-                                  </Badge>
-                                )}
-                              </div>
+                              <span className="text-sm text-slate-600">
+                                {user.createdAt ? formatDate(user.createdAt, 'N/A') : 'N/A'}
+                              </span>
                             </td>
                             <td className="py-4 px-6">
-                              <div className="flex items-center space-x-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
+                              <div className="flex items-center gap-1.5">
+                                <button
                                   onClick={() => handleViewUser(user)}
-                                  className={cn(
-                                    "hover:bg-slate-200",
-                                    isNewToday && "text-yellow-700 hover:text-yellow-800"
-                                  )}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100"
+                                  title="View details"
                                 >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
+                                  <Eye className="h-4 w-4" />
+                                </button>
+
+                                {user.role !== 'admin' && (
+                                  <button
+                                    onClick={() => handleLoginAsUser(user)}
+                                    disabled={impersonatingId === user._id}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-white text-[#1560BD] transition-colors hover:bg-blue-50 disabled:opacity-60"
+                                    title="Login as this user"
+                                  >
+                                    {impersonatingId === user._id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <LogIn className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+
+                                <button
                                   onClick={() => handleEditUser(user)}
-                                  className="hover:bg-slate-200"
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100"
+                                  title="Edit user"
                                 >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
+                                  <Edit className="h-4 w-4" />
+                                </button>
+
+                                <button
                                   onClick={() => handleDeleteClick(user._id, user.name)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition-colors hover:bg-red-50"
+                                  title="Delete user"
                                 >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1341,7 +1640,7 @@ export default function UsersPage() {
               </div>
 
               {/* Pagination */}
-              <div className="mt-6">
+              <div className="border-t border-slate-100 px-4 py-4">
                 <PaginationComponent
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -1354,15 +1653,15 @@ export default function UsersPage() {
 
               {/* Today's Users Summary */}
               {todayNewUsers > 0 && (
-                <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 flex items-center justify-between">
+                <div className="mx-4 mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">
-                      {todayNewUsers} new user{todayNewUsers !== 1 ? 's' : ''} joined today!
+                    <Sparkles className="h-5 w-5 text-[#1560BD]" />
+                    <span className="text-sm font-medium text-[#0d3a73]">
+                      {todayNewUsers} new user{todayNewUsers !== 1 ? 's' : ''} joined today
                     </span>
                   </div>
-                  <Badge variant="outline" className="bg-white text-yellow-700 border-yellow-300">
-                    Click on user to remove highlight
+                  <Badge variant="outline" className="border-blue-300 bg-white text-[#1560BD]">
+                    Click a row to dismiss highlight
                   </Badge>
                 </div>
               )}
@@ -1422,11 +1721,13 @@ export default function UsersPage() {
 
       {/* View User Modal */}
       {showViewModal && selectedUser && (
-        <UserViewModal 
-          user={selectedUser} 
-          open={showViewModal} 
+        <UserViewModal
+          user={selectedUser}
+          open={showViewModal}
           onOpenChange={setShowViewModal}
           onClearHighlight={handleClearHighlight}
+          onLoginAs={handleLoginAsUser}
+          impersonating={impersonatingId === selectedUser._id}
         />
       )}
 

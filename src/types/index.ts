@@ -18,6 +18,7 @@ export interface User {
   state?: string;
   zipCode?: string;
   country?: string;
+  gstin?: string;
   role: string;
   status: 'active' | 'inactive';
   isEmailVerified: boolean;
@@ -37,6 +38,7 @@ export interface UserFormData {
   state?: string;
   zipCode?: string;
   country?: string;
+  gstin?: string;
   role: string;
   status: 'active' | 'inactive';
    isEmailVerified?: boolean;
@@ -69,6 +71,9 @@ export interface Plan {
   location: 'india' | 'us';
   windowsPrice: string;
   linuxPrice: string;
+  managedLinuxPrice?: string;
+  managedWindowsPrice?: string;
+  ips?: number;
   systemType?: 'linux' | 'window'; // For compatibility with existing code
   specs: {
     cpu: string;
@@ -89,6 +94,9 @@ export interface PlanFormData {
   location: 'india' | 'us';
   windowsPrice: string;
   linuxPrice: string;
+  managedLinuxPrice?: string;
+  managedWindowsPrice?: string;
+  ips?: number;
   systemType?: 'linux' | 'window';
   specs: {
     cpu: string;
@@ -277,6 +285,13 @@ export interface IPPricing {
   '32GB': number;
 }
 
+export interface IPStockByRam {
+  '4GB': number;
+  '8GB': number;
+  '16GB': number;
+  '32GB': number;
+}
+
 export interface IPPool {
   _id: string;
   series: string;
@@ -289,6 +304,7 @@ export interface IPPool {
   description: string;
   isActive: boolean;
   stock: number;
+  stockByRam?: IPStockByRam;
   tags: Array<'recommended' | 'new' | 'popular' | 'limited'>;
   createdAt: string;
   updatedAt: string;
@@ -304,6 +320,7 @@ export interface IPPoolFormData {
   specs: IPSpecs;
   description: string;
   stock: number;
+  stockByRam?: IPStockByRam;
   tags: string[];
   isActive: boolean;
 }

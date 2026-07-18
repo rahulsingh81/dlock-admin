@@ -2,14 +2,14 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter
+} from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,8 +47,10 @@ import {
   Database
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { getIPPools, createIPPool, updateIPPool, deleteIPPool } from '@/services/api';
+import { useTableBulk } from '@/hooks/use-table-bulk';
+import { BulkBar, SelectCheck } from '@/components/bulk-bar';
 
 
 // Types for IP Pool
@@ -97,6 +99,13 @@ interface IPPricing {
   '32GB': number;
 }
 
+interface IPStockByRam {
+  '4GB': number;
+  '8GB': number;
+  '16GB': number;
+  '32GB': number;
+}
+
 interface IPPool {
   _id: string;
   series: string;
@@ -110,6 +119,7 @@ interface IPPool {
   description: string;
   isActive: boolean;
   stock: number;
+  stockByRam: IPStockByRam;
   tags: Array<'recommended' | 'new' | 'popular' | 'limited'>;
   createdAt: string;
   updatedAt: string;
@@ -126,6 +136,7 @@ interface IPPoolFormData {
   specs: IPSpecs;
   description: string;
   stock: number;
+  stockByRam: IPStockByRam;
   tags: string[];
   isActive: boolean;
 }
@@ -213,44 +224,51 @@ const getPlanBadge = (plan: string) => {
 };
 
 // Stats Card Component
-const StatsCard = ({ 
-  title, 
-  value, 
-  icon: Icon, 
-  gradient,
+const IP_TONES: Record<string, { bg: string; text: string }> = {
+  blue: { bg: 'bg-blue-50', text: 'text-[#1560BD]' },
+  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600' },
+  rose: { bg: 'bg-rose-50', text: 'text-rose-500' },
+  violet: { bg: 'bg-violet-50', text: 'text-violet-600' },
+  amber: { bg: 'bg-amber-50', text: 'text-amber-600' },
+};
+
+const StatsCard = ({
+  title,
+  value,
+  icon: Icon,
+  tone = 'blue',
   loading = false,
-  subValue
+  subValue,
 }: {
   title: string;
   value: string;
   icon: any;
-  gradient: string;
+  tone?: keyof typeof IP_TONES;
   loading?: boolean;
   subValue?: string;
-}) => (
-  <Card className="card-hover">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-slate-600">
-        {title}
-      </CardTitle>
-      <div className={`w-10 h-10 rounded-lg ${gradient} flex items-center justify-center`}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-    </CardHeader>
-    <CardContent>
-      {loading ? (
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-      ) : (
-        <>
-          <div className="text-2xl font-bold text-slate-900 mb-1">{value}</div>
-          {subValue && (
-            <p className="text-xs text-slate-500">{subValue}</p>
+}) => {
+  const t = IP_TONES[tone] || IP_TONES.blue;
+  return (
+    <Card className="card-hover">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.bg}`}>
+          <Icon className={`h-5 w-5 ${t.text}`} />
+        </div>
+        <div className="min-w-0">
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+          ) : (
+            <>
+              <div className="text-xl font-bold leading-tight tabular-nums text-slate-900">{value}</div>
+              <div className="truncate text-xs font-medium text-slate-500">{title}</div>
+              {subValue && <p className="truncate text-[11px] text-slate-400">{subValue}</p>}
+            </>
           )}
-        </>
-      )}
-    </CardContent>
-  </Card>
-);
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // IP Pool View Modal
 const IPPoolViewModal = ({ 
@@ -270,17 +288,17 @@ const IPPoolViewModal = ({
   const PlanIcon = plan.icon;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2 text-xl">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto p-6 sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="flex items-center space-x-2 text-xl">
             <Globe className="w-5 h-5" />
             <span>IP Pool Details: {ipPool.series}</span>
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Complete information about this IP series and its configurations
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         
         <div className="space-y-6">
           {/* Header Info */}
@@ -413,6 +431,18 @@ const IPPoolViewModal = ({
                             {formatCurrency(ipPool.pricing[ram])}
                           </span>
                           <span className="text-xs text-slate-500 ml-1">/mo</span>
+                          {ipPool.availability[ram] && (
+                            <div
+                              className={cn(
+                                'text-[11px] font-medium',
+                                (ipPool.stockByRam?.[ram] || 0) > 0 ? 'text-green-600' : 'text-red-500'
+                              )}
+                            >
+                              {(ipPool.stockByRam?.[ram] || 0) > 0
+                                ? `${ipPool.stockByRam?.[ram]} in stock`
+                                : 'Out of stock'}
+                            </div>
+                          )}
                         </div>
                       </div>
                       
@@ -471,13 +501,13 @@ const IPPoolViewModal = ({
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">Created</p>
                     <p className="font-medium text-slate-900">
-                      {new Date(ipPool.createdAt).toLocaleDateString()}
+                      {formatDate(ipPool.createdAt)}
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">Last Updated</p>
                     <p className="font-medium text-slate-900">
-                      {new Date(ipPool.updatedAt).toLocaleDateString()}
+                      {formatDate(ipPool.updatedAt)}
                     </p>
                   </div>
                 </div>
@@ -485,8 +515,8 @@ const IPPoolViewModal = ({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
@@ -610,6 +640,16 @@ const AddEditIPPoolModal = ({
     }));
   }, [setFormData]);
 
+  const handleStockChange = useCallback((ram: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      stockByRam: {
+        ...prev.stockByRam,
+        [ram]: Math.max(0, parseInt(value) || 0)
+      }
+    }));
+  }, [setFormData]);
+
   const handleRAMSpecsChange = useCallback((path: string, value: string) => {
     const [ram, field] = path.split('.');
     setFormData(prev => ({
@@ -617,7 +657,7 @@ const AddEditIPPoolModal = ({
       ramSpecs: {
         ...prev.ramSpecs,
         [ram]: {
-          ...prev.ramSpecs[ram as keyof typeof prev.ramSpecs],
+          ...(prev.ramSpecs?.[ram as keyof typeof prev.ramSpecs] || {}),
           [field]: value
         }
       }
@@ -644,21 +684,22 @@ const AddEditIPPoolModal = ({
   }, [setFormData]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="w-full overflow-y-auto p-6 sm:max-w-2xl"
         onInteractOutside={(e) => {
           if (isSaving) {
             e.preventDefault();
           }
         }}
       >
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit IP Pool' : 'Add New IP Pool'}</DialogTitle>
-          <DialogDescription>
+        <SheetHeader>
+          <SheetTitle>{isEdit ? 'Edit IP Pool' : 'Add New IP Pool'}</SheetTitle>
+          <SheetDescription>
             {isEdit ? 'Update IP series configuration' : 'Add a new IP series to the pool'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -821,9 +862,9 @@ const AddEditIPPoolModal = ({
                   <div key={ram} className="space-y-2">
                     <div className="grid grid-cols-12 gap-4 items-center p-3 bg-slate-50 rounded-lg">
                       <div className="col-span-2 flex items-center space-x-2">
-                        <Checkbox 
+                        <Checkbox
                           id={`avail-${ram}`}
-                          checked={formData.availability[ram as keyof IPAvailability]}
+                          checked={formData.availability?.[ram as keyof IPAvailability] ?? false}
                           onCheckedChange={(checked) => handleAvailabilityChange(ram, checked as boolean)}
                           disabled={isSaving}
                         />
@@ -831,30 +872,48 @@ const AddEditIPPoolModal = ({
                           {ram}
                         </Label>
                       </div>
-                      <div className="col-span-4">
+                      <div className="col-span-5">
+                        <Label className="text-[11px] text-slate-500">Price / month</Label>
                         <div className="flex items-center">
                           <span className="text-slate-500 mr-2">₹</span>
                           <Input
                             type="number"
                             min="0"
-                            value={formData.pricing[ram as keyof IPPricing]}
+                            value={formData.pricing?.[ram as keyof IPPricing] ?? 0}
                             onChange={(e) => handlePricingChange(ram, e.target.value)}
                             className="w-full"
                             placeholder="Price"
-                            disabled={isSaving || !formData.availability[ram as keyof IPAvailability]}
+                            disabled={isSaving || !formData.availability?.[ram as keyof IPAvailability]}
                           />
                         </div>
                       </div>
-                      <div className="col-span-6 text-xs text-slate-500">
-                        Price per month
+                      <div className="col-span-5">
+                        <Label className="text-[11px] text-slate-500">Stock (units)</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={formData.stockByRam?.[ram as keyof IPStockByRam] ?? 0}
+                            onChange={(e) => handleStockChange(ram, e.target.value)}
+                            className="w-full"
+                            placeholder="Stock qty"
+                            disabled={isSaving || !formData.availability?.[ram as keyof IPAvailability]}
+                          />
+                          {formData.availability?.[ram as keyof IPAvailability] &&
+                            (formData.stockByRam?.[ram as keyof IPStockByRam] ?? 0) <= 0 && (
+                              <span className="whitespace-nowrap text-[11px] font-medium text-red-500">
+                                Out of stock
+                              </span>
+                            )}
+                        </div>
                       </div>
                     </div>
 
                     {/* RAM Specific Specs */}
-                    {formData.availability[ram as keyof IPAvailability] && (
+                    {formData.availability?.[ram as keyof IPAvailability] && (
                       <RAMSpecsEditor
                         ramSize={ram}
-                        specs={formData.ramSpecs[ram as keyof typeof formData.ramSpecs]}
+                        specs={formData.ramSpecs?.[ram as keyof typeof formData.ramSpecs] ?? { cpu: '', storage: '', bandwidth: '' }}
                         onChange={handleRAMSpecsChange}
                         disabled={isSaving}
                         isAvailable={true}
@@ -921,7 +980,7 @@ const AddEditIPPoolModal = ({
               </div>
             </TabsContent>
 
-            <DialogFooter className="pt-4">
+            <SheetFooter className="mt-6 gap-2 border-t pt-4">
               <Button 
                 type="button"
                 variant="outline" 
@@ -930,9 +989,9 @@ const AddEditIPPoolModal = ({
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
-                className="btn-primary"
+                className="bg-[#1560BD] text-white hover:bg-[#124f9c]"
                 disabled={isSaving}
               >
                 {isSaving ? (
@@ -944,11 +1003,11 @@ const AddEditIPPoolModal = ({
                   isEdit ? 'Update IP Pool' : 'Add IP Pool'
                 )}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
@@ -969,17 +1028,17 @@ const DeleteConfirmModal = ({
   if (!ipPool) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full p-6 sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2 text-red-600">
             <Trash2 className="w-5 h-5" />
             Delete IP Pool
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Are you sure you want to delete this IP pool? This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="py-4">
           <div className="p-4 bg-slate-50 rounded-lg space-y-2">
@@ -991,7 +1050,7 @@ const DeleteConfirmModal = ({
           </div>
         </div>
 
-        <DialogFooter>
+        <SheetFooter className="mt-6 gap-2 border-t pt-4">
           <Button
             type="button"
             variant="outline"
@@ -1015,9 +1074,9 @@ const DeleteConfirmModal = ({
               'Delete IP Pool'
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };
 
@@ -1090,12 +1149,18 @@ export default function IPPoolsPage() {
     },
     description: 'High-performance VPS with dedicated IP series',
     stock: 100,
+    stockByRam: {
+      '4GB': 0,
+      '8GB': 0,
+      '16GB': 0,
+      '32GB': 0
+    },
     tags: [],
     isActive: true
   });
 
   const { toast } = useToast();
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const filterTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -1172,6 +1237,8 @@ export default function IPPoolsPage() {
       }
     }
   }, [currentPage, searchTerm, locationFilter, planFilter, statusFilter, ramFilter, activeFilter, itemsPerPage, toast]);
+
+  const { bulk, deleting, onDelete } = useTableBulk(ipPools, { noun: 'IP pool', deleteOne: deleteIPPool, reload: () => fetchIPPools(false) });
 
   // Initial fetch
   useEffect(() => {
@@ -1274,6 +1341,12 @@ export default function IPPoolsPage() {
       },
       description: 'High-performance VPS with dedicated IP series',
       stock: 100,
+      stockByRam: {
+        '4GB': 0,
+        '8GB': 0,
+        '16GB': 0,
+        '32GB': 0
+      },
       tags: [],
       isActive: true
     });
@@ -1298,6 +1371,9 @@ export default function IPPoolsPage() {
       specs: { ...ipPool.specs },
       description: ipPool.description,
       stock: ipPool.stock,
+      stockByRam: ipPool.stockByRam
+        ? { ...ipPool.stockByRam }
+        : { '4GB': 0, '8GB': 0, '16GB': 0, '32GB': 0 },
       tags: [...ipPool.tags],
       isActive: ipPool.isActive
     });
@@ -1380,76 +1456,26 @@ export default function IPPoolsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold text-slate-900">IP Pools Management</h1>
-        <p className="text-slate-600">Manage and monitor all IP series and their configurations</p>
-      </div>
-
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total IP Pools"
-          value={totalCount.toString()}
-          icon={Globe}
-          gradient="bg-gradient-to-r from-blue-500 to-blue-600"
-          loading={loading}
-        />
-        <StatsCard
-          title="Active Pools"
-          value={activeCount.toString()}
-          icon={CheckCircle}
-          gradient="bg-gradient-to-r from-green-500 to-green-600"
-          loading={loading}
-        />
-        <StatsCard
-          title="Inactive Pools"
-          value={inactiveCount.toString()}
-          icon={Ban}
-          gradient="bg-gradient-to-r from-red-500 to-red-600"
-          loading={loading}
-        />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatsCard title="Total IP Pools" value={totalCount.toString()} icon={Globe} tone="blue" loading={loading} />
+        <StatsCard title="Active Pools" value={activeCount.toString()} icon={CheckCircle} tone="emerald" loading={loading} />
+        <StatsCard title="Inactive Pools" value={inactiveCount.toString()} icon={Ban} tone="rose" loading={loading} />
         <StatsCard
           title="Available"
           value={statusCounts.available.toString()}
           icon={Zap}
-          gradient="bg-gradient-to-r from-purple-500 to-purple-600"
+          tone="violet"
           loading={loading}
           subValue={`${statusCounts['coming-soon']} coming soon`}
         />
       </div>
 
-      {/* Plan Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {Object.entries(planCounts).map(([plan, count]) => {
-          const planBadge = getPlanBadge(plan);
-          const PlanIcon = planBadge.icon;
-          return (
-            <Card key={plan} className="border-l-4" style={{ borderLeftColor: 
-              plan === 'SILVER' ? '#94a3b8' :
-              plan === 'GOLD' ? '#eab308' :
-              plan === 'DIAMOND' ? '#3b82f6' : '#a855f7'
-            }}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">{plan}</p>
-                    <p className="text-2xl font-bold">{count}</p>
-                  </div>
-                  <PlanIcon className="w-8 h-8 text-slate-400" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
 
       {/* Filters and Controls */}
       <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <CardTitle>IP Pools List</CardTitle>
-            <div className="flex flex-col sm:flex-row gap-3">
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-center gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
@@ -1459,7 +1485,22 @@ export default function IPPoolsPage() {
                   className="pl-10 w-64"
                 />
               </div>
-              
+
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="whitespace-nowrap">Rows</span>
+                <Select value={String(itemsPerPage)} onValueChange={(v) => { setCurrentPage(1); setItemsPerPage(Number(v)); }}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Select value={locationFilter} onValueChange={setLocationFilter}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Location" />
@@ -1515,54 +1556,47 @@ export default function IPPoolsPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={activeFilter} onValueChange={setActiveFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Active Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button className="btn-primary" onClick={handleAddIPPool}>
+              <Button className="bg-[#1560BD] text-white hover:bg-[#124f9c]" onClick={handleAddIPPool}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add IP Pool
               </Button>
-            </div>
           </div>
-        </CardHeader>
-        
-        <CardContent>
+        </CardContent>
+      </Card>
+
+      {/* Bulk actions */}
+      <BulkBar count={bulk.count} onClear={bulk.clear} onDelete={onDelete} deleting={deleting} noun="IP pool" />
+
+      {/* IP Pools Table */}
+      <Card>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
             </div>
           ) : (
             <>
               {/* IP Pools Table */}
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <div className="overflow-x-auto rounded-lg">
                 <table className="w-full">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">IP Series</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Location</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Plan</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Status</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">RAM Options</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Pricing (From)</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Specs</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Stock</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Tags</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Active</th>
-                      <th className="text-left py-4 px-6 font-semibold text-slate-600">Actions</th>
+                      <th className="px-4 py-3.5 w-10"><SelectCheck ariaLabel="Select all IP pools" checked={bulk.allSelected} indeterminate={bulk.someSelected} onChange={bulk.toggleAll} /></th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">IP Series</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Location</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Plan</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">RAM Options</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Pricing (From)</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Specs</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Stock</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ipPools.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="text-center py-12 text-slate-500">
+                        <td colSpan={10} className="text-center py-12 text-slate-500">
                           <div className="flex flex-col items-center space-y-3">
                             <Globe className="w-12 h-12 text-slate-300" />
                             <div>
@@ -1580,11 +1614,11 @@ export default function IPPoolsPage() {
                         const PlanIcon = plan.icon;
                         
                         // Get minimum price
-                        const availableRams = Object.entries(ipPool.availability)
+                        const availableRams = Object.entries(ipPool.availability || {})
                           .filter(([_, available]) => available)
                           .map(([ram]) => ram);
                         const minPrice = availableRams.length > 0
-                          ? Math.min(...availableRams.map(ram => ipPool.pricing[ram as keyof IPPricing]))
+                          ? Math.min(...availableRams.map(ram => ipPool.pricing?.[ram as keyof IPPricing] ?? 0))
                           : 0;
 
                         // Get first available RAM specs for display
@@ -1593,6 +1627,7 @@ export default function IPPoolsPage() {
 
                         return (
                           <tr key={ipPool._id} className="border-t border-slate-100 hover:bg-slate-50">
+                            <td className="px-4 py-4"><SelectCheck ariaLabel="Select IP pool" checked={bulk.selected.has(ipPool._id)} onChange={() => bulk.toggle(ipPool._id)} /></td>
                             <td className="py-4 px-6">
                               <div className="flex items-center space-x-3">
                                 <Globe className="w-5 h-5 text-slate-400" />
@@ -1652,30 +1687,43 @@ export default function IPPoolsPage() {
                               )}
                             </td>
                             <td className="py-4 px-6">
-                              <Badge variant={ipPool.stock > 0 ? 'secondary' : 'destructive'}>
-                                {ipPool.stock}
-                              </Badge>
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="flex flex-wrap gap-1">
-                                {ipPool.tags?.map(tag => (
-                                  <Badge key={tag} variant="outline" className="capitalize text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="py-4 px-6">
-                              {ipPool.isActive ? (
-                                <CheckCircle className="w-5 h-5 text-green-600" />
-                              ) : (
-                                <XCircle className="w-5 h-5 text-red-600" />
-                              )}
+                              {(() => {
+                                const sb = ipPool.stockByRam;
+                                const total = sb
+                                  ? (sb['4GB'] || 0) + (sb['8GB'] || 0) + (sb['16GB'] || 0) + (sb['32GB'] || 0)
+                                  : ipPool.stock;
+                                return (
+                                  <div className="space-y-1">
+                                    <Badge variant={total > 0 ? 'secondary' : 'destructive'}>
+                                      {total} total
+                                    </Badge>
+                                    {sb && (
+                                      <div className="flex flex-wrap gap-1">
+                                        {(['4GB', '8GB', '16GB', '32GB'] as const).map((r) =>
+                                          ipPool.availability[r] ? (
+                                            <span
+                                              key={r}
+                                              className={cn(
+                                                'rounded px-1.5 py-0.5 text-[10px] font-medium',
+                                                (sb[r] || 0) > 0
+                                                  ? 'bg-slate-100 text-slate-600'
+                                                  : 'bg-red-50 text-red-600'
+                                              )}
+                                            >
+                                              {r}: {sb[r] || 0}
+                                            </span>
+                                          ) : null
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center space-x-2">
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   onClick={() => handleViewIPPool(ipPool)}
                                   className="hover:bg-slate-200"
@@ -1712,7 +1760,7 @@ export default function IPPoolsPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-6">
+                <div className="border-t border-slate-100 px-4 py-4">
                   <PaginationComponent
                     currentPage={currentPage}
                     totalPages={totalPages}
