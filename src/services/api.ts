@@ -155,6 +155,8 @@ export const getNotifications = async (filter = 'all', page = 1, limit = 50) =>
   handle(client.get('/admin/notifications', { params: { filter, page, limit } }));
 export const markNotificationRead = async (id: string) => handle(client.patch(`/admin/notifications/${id}/read`));
 export const markAllNotificationsRead = async () => handle(client.patch('/admin/notifications/read-all'));
+export const deleteNotification = async (id: string) => handle(client.delete(`/admin/notifications/${id}`));
+export const deleteAllNotifications = async () => handle(client.delete('/admin/notifications'));
 
 // ==================== BROADCAST ====================
 export const sendBroadcast = async (data: { subject: string; message: string; segment: string }) =>

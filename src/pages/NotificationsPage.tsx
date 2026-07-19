@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { PaginationComponent } from '@/components/PaginationComponent';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { UserPlus, Package, LifeBuoy, RefreshCw, CreditCard, Info, CheckCheck, Loader2, Bell, Megaphone, Send } from 'lucide-react';
-import { getNotifications, markNotificationRead, markAllNotificationsRead, sendBroadcast } from '@/services/api';
+import { UserPlus, Package, LifeBuoy, RefreshCw, CreditCard, Info, CheckCheck, Loader2, Bell, Megaphone, Send, Trash2 } from 'lucide-react';
+import { getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification, deleteAllNotifications, sendBroadcast } from '@/services/api';
 import { useConfirm } from '@/components/confirm-provider';
 
 const TYPE_ICON: Record<string, any> = { register: UserPlus, order: Package, ticket: LifeBuoy, renew: RefreshCw, payment: CreditCard, system: Info };
@@ -47,6 +47,19 @@ export default function NotificationsPage() {
 
   const readOne = async (id: string, read: boolean) => { if (read) return; await markNotificationRead(id); load(); };
   const readAll = async () => { await markAllNotificationsRead(); load(); };
+
+  const delOne = async (id: string) => {
+    const ok = await confirm({ title: 'Delete notification?', description: 'This notification will be permanently removed.', confirmText: 'Delete' });
+    if (!ok) return;
+    try { await deleteNotification(id); toast({ title: 'Deleted' }); load(); }
+    catch (err: any) { toast({ title: 'Error', description: err.message || 'Failed to delete', variant: 'destructive' }); }
+  };
+  const delAll = async () => {
+    const ok = await confirm({ title: 'Delete all notifications?', description: `All ${total} notification${total === 1 ? '' : 's'} will be permanently removed. This cannot be undone.`, confirmText: 'Delete all' });
+    if (!ok) return;
+    try { const res: any = await deleteAllNotifications(); toast({ title: 'Cleared', description: `${res.deleted || 0} notification(s) deleted` }); setPage(1); load(); }
+    catch (err: any) { toast({ title: 'Error', description: err.message || 'Failed to delete', variant: 'destructive' }); }
+  };
 
   // Broadcast composer
   const [bSubject, setBSubject] = useState('');
@@ -113,9 +126,14 @@ export default function NotificationsPage() {
             </button>
           ))}
         </div>
-        {unread > 0 && (
-          <Button variant="outline" onClick={readAll} className="w-fit"><CheckCheck className="mr-2 h-4 w-4" /> Mark all read</Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {unread > 0 && (
+            <Button variant="outline" onClick={readAll} className="w-fit"><CheckCheck className="mr-2 h-4 w-4" /> Mark all read</Button>
+          )}
+          {total > 0 && (
+            <Button variant="outline" onClick={delAll} className="w-fit text-rose-600 hover:bg-rose-50 hover:text-rose-700"><Trash2 className="mr-2 h-4 w-4" /> Delete all</Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -131,21 +149,27 @@ export default function NotificationsPage() {
               {items.map((n) => {
                 const Icon = TYPE_ICON[n.type] || Info;
                 return (
-                  <button key={n._id} onClick={() => readOne(n._id, n.read)}
-                    className={cn('flex w-full items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50', !n.read && 'bg-blue-50/40')}>
-                    <div className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', TYPE_TONE[n.type] || TYPE_TONE.system)}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-900">{n.title}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">{n.type}</span>
-                        {!n.read && <span className="h-2 w-2 rounded-full bg-[#1560BD]" />}
+                  <div key={n._id}
+                    className={cn('flex w-full items-start gap-3 px-5 py-4 transition-colors hover:bg-slate-50', !n.read && 'bg-blue-50/40')}>
+                    <button onClick={() => readOne(n._id, n.read)} className="flex min-w-0 flex-1 items-start gap-4 text-left">
+                      <div className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', TYPE_TONE[n.type] || TYPE_TONE.system)}>
+                        <Icon className="h-4 w-4" />
                       </div>
-                      <p className="text-sm text-slate-600">{n.message}</p>
-                      <p className="mt-0.5 text-xs text-slate-400">{fmt(n.createdAt)}</p>
-                    </div>
-                  </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">{n.title}</span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">{n.type}</span>
+                          {!n.read && <span className="h-2 w-2 rounded-full bg-[#1560BD]" />}
+                        </div>
+                        <p className="text-sm text-slate-600">{n.message}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">{fmt(n.createdAt)}</p>
+                      </div>
+                    </button>
+                    <button onClick={() => delOne(n._id)} title="Delete" aria-label="Delete notification"
+                      className="mt-0.5 shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
