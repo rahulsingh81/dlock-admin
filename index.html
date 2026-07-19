@@ -3,10 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/admin/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Modern Admin Dashboard - Comprehensive management system for users, orders, and analytics" />
     <meta name="keywords" content="admin, dashboard, management, analytics, users, orders, modern" />
     <meta name="author" content="Admin Dashboard" />
+
+    <!-- PWA: install the admin panel as an app (scoped to /admin/ — does not affect the website) -->
+    <link rel="manifest" href="/admin/manifest.webmanifest" />
+    <meta name="theme-color" content="#1560BD" />
+    <link rel="apple-touch-icon" href="/admin/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Dlock Admin" />
+
     <title>Admin Dashboard - Modern Management System</title>
   </head>
   <body>
