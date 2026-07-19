@@ -2,7 +2,7 @@
 // It never intercepts requests for the main website (dlockservices.com/…),
 // only pages/assets under /admin/. This makes the admin installable as an app
 // and lets the shell load when offline, without touching the public site.
-const CACHE = 'dlock-admin-v1';
+const CACHE = 'dlock-admin-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
