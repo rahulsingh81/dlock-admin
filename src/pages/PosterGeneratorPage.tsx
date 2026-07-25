@@ -37,13 +37,13 @@ const THEMES: Theme[] = [
     feature: '#cbd5e1', footer: '#ffffff', footerSub: '#94a3b8',
   },
   {
-    id: 'sunset', name: 'Sunset', swatch: 'linear-gradient(135deg,#7e22ce,#be185d)',
-    bg: ['#3b0764', '#7e22ce', '#be185d'], glow: 'rgba(251,191,36,.24)', frame: 'rgba(255,255,255,.16)',
-    headline: '#ffffff', accent: '#fcd34d', seriesLabel: '#f0abfc',
-    badgeBg: '#ef4444', badgeInk: '#ffffff',
-    cardBg: '#ffffff', cardBorder: 'transparent', ramInk: '#7e22ce', price: '#be185d', sub: '#6b7280',
-    chipBg: 'rgba(252,211,77,.16)', chipBorder: 'rgba(252,211,77,.55)', chipInk: '#fde68a',
-    feature: '#f5d0fe', footer: '#ffffff', footerSub: '#e9d5ff',
+    id: 'crimson', name: 'Crimson', swatch: 'linear-gradient(135deg,#7f1d1d,#f59e0b)',
+    bg: ['#7f1d1d', '#b91c1c', '#7f1d1d'], glow: 'rgba(245,158,11,.22)', frame: 'rgba(255,255,255,.16)',
+    headline: '#ffffff', accent: '#fbbf24', seriesLabel: '#fecaca',
+    badgeBg: '#fbbf24', badgeInk: '#3a2400',
+    cardBg: '#ffffff', cardBorder: 'transparent', ramInk: '#7f1d1d', price: '#b91c1c', sub: '#64748b',
+    chipBg: 'rgba(251,191,36,.16)', chipBorder: 'rgba(251,191,36,.55)', chipInk: '#fde68a',
+    feature: '#fee2e2', footer: '#ffffff', footerSub: '#fecaca',
   },
   {
     id: 'emerald', name: 'Emerald', swatch: 'linear-gradient(135deg,#065f46,#6ee7b7)',
@@ -65,8 +65,15 @@ const THEMES: Theme[] = [
   },
 ];
 
+const LAYOUTS = [
+  { id: 'cards', name: 'Cards' },
+  { id: 'list', name: 'List' },
+  { id: 'spotlight', name: 'Spotlight' },
+];
+
 export default function PosterGeneratorPage() {
   const [design, setDesign] = useState(0);
+  const [layout, setLayout] = useState('cards');
   const [title, setTitle] = useState('IP SERIES');
   const [subtitle, setSubtitle] = useState('SPECIAL OFFER');
   const [badge, setBadge] = useState('VALID TILL 26th ONLY');
@@ -145,24 +152,73 @@ export default function PosterGeneratorPage() {
       ctx.fillStyle = th.badgeInk; ctx.fillText('⚡  ' + badge, W / 2, by + 42);
     }
 
-    // price cards
-    const n = tiers.length, m = 70, gap = 26, cy = 580, ch = 300;
-    const cw = (W - 2 * m - (n - 1) * gap) / n;
-    tiers.forEach((t, i) => {
-      const cx = m + i * (cw + gap), pop = t.popular;
-      rr(cx, cy, cw, ch, 24); ctx.fillStyle = th.cardBg; ctx.fill();
-      if (pop) {
-        ctx.strokeStyle = th.accent; ctx.lineWidth = 5; rr(cx, cy, cw, ch, 24); ctx.stroke();
-        rr(cx + cw / 2 - 70, cy - 20, 140, 40, 20); ctx.fillStyle = th.accent; ctx.fill();
-        ctx.fillStyle = '#0a2233'; ctx.font = '800 22px Arial, sans-serif'; ctx.fillText('POPULAR', cx + cw / 2, cy + 7);
-      } else if (th.cardBorder !== 'transparent') {
-        ctx.strokeStyle = th.cardBorder; ctx.lineWidth = 2; rr(cx, cy, cw, ch, 24); ctx.stroke();
+    // ---- price section (switches by layout) ----
+    const n = tiers.length, m = 70;
+    if (layout === 'list') {
+      const cy = 578, band = 296, rowGap = 14;
+      const rowH = (band - (n - 1) * rowGap) / n;
+      tiers.forEach((t, i) => {
+        const ry = cy + i * (rowH + rowGap), pop = t.popular;
+        rr(m, ry, W - 2 * m, rowH, 20); ctx.fillStyle = th.cardBg; ctx.fill();
+        if (pop) { ctx.strokeStyle = th.accent; ctx.lineWidth = 4; rr(m, ry, W - 2 * m, rowH, 20); ctx.stroke(); }
+        else if (th.cardBorder !== 'transparent') { ctx.strokeStyle = th.cardBorder; ctx.lineWidth = 2; rr(m, ry, W - 2 * m, rowH, 20); ctx.stroke(); }
+        const midY = ry + rowH / 2;
+        ctx.textAlign = 'left'; ctx.fillStyle = th.ramInk; ctx.font = '800 46px Arial, sans-serif';
+        ctx.fillText(t.ram, m + 44, midY + 4);
+        ctx.fillStyle = th.sub; ctx.font = '600 26px Arial, sans-serif'; ctx.fillText('RAM', m + 44, midY + 40);
+        ctx.textAlign = 'right'; ctx.fillStyle = th.sub; ctx.font = '600 26px Arial, sans-serif';
+        ctx.fillText('/mo', W - m - 44, midY + 4);
+        const moW = ctx.measureText('/mo').width;
+        ctx.fillStyle = th.price; ctx.font = '800 62px Arial, sans-serif';
+        ctx.fillText('₹' + t.price, W - m - 44 - moW - 16, midY + 8);
+        if (pop) { ctx.textAlign = 'center'; rr(m + 30, ry - 16, 130, 34, 17); ctx.fillStyle = th.accent; ctx.fill(); ctx.fillStyle = '#0a2233'; ctx.font = '800 18px Arial, sans-serif'; ctx.fillText('POPULAR', m + 95, ry + 7); }
+      });
+      ctx.textAlign = 'center';
+    } else if (layout === 'spotlight') {
+      const hi = Math.max(0, tiers.findIndex((t) => t.popular));
+      const hero = tiers[hi] || tiers[0];
+      const bw2 = 620, bh2 = 260, bx2 = (W - bw2) / 2, by2 = 560;
+      rr(bx2, by2, bw2, bh2, 28); ctx.fillStyle = th.cardBg; ctx.fill();
+      ctx.strokeStyle = th.accent; ctx.lineWidth = 6; rr(bx2, by2, bw2, bh2, 28); ctx.stroke();
+      rr(W / 2 - 110, by2 - 24, 220, 48, 24); ctx.fillStyle = th.accent; ctx.fill();
+      ctx.fillStyle = '#0a2233'; ctx.font = '800 24px Arial, sans-serif'; ctx.fillText('BEST VALUE', W / 2, by2 + 8);
+      ctx.fillStyle = th.ramInk; ctx.font = '800 46px Arial, sans-serif'; ctx.fillText((hero?.ram || '') + ' RAM', W / 2, by2 + 90);
+      ctx.fillStyle = th.price; ctx.font = '800 128px Arial, sans-serif'; ctx.fillText('₹' + (hero?.price || ''), W / 2, by2 + 210);
+      ctx.fillStyle = th.sub; ctx.font = '600 28px Arial, sans-serif'; ctx.fillText('/ month', W / 2, by2 + 244);
+      // other tiers as pills
+      const others = tiers.filter((_, i) => i !== hi);
+      if (others.length) {
+        ctx.font = '700 30px Arial, sans-serif';
+        const labels = others.map((t) => `${t.ram} — ₹${t.price}`);
+        const widths = labels.map((l) => ctx.measureText(l).width + 52);
+        const totalW = widths.reduce((a, b) => a + b, 0) + (others.length - 1) * 20;
+        let sx = (W - totalW) / 2; const py2 = 862, ph2 = 56;
+        labels.forEach((l, i) => {
+          rr(sx, py2, widths[i], ph2, 28); ctx.fillStyle = th.chipBg; ctx.fill();
+          ctx.strokeStyle = th.chipBorder; ctx.lineWidth = 2; rr(sx, py2, widths[i], ph2, 28); ctx.stroke();
+          ctx.fillStyle = th.headline; ctx.textAlign = 'center'; ctx.fillText(l, sx + widths[i] / 2, py2 + 38);
+          sx += widths[i] + 20;
+        });
       }
-      ctx.fillStyle = th.ramInk; ctx.font = `800 ${n > 3 ? 34 : 40}px Arial, sans-serif`; ctx.fillText(t.ram, cx + cw / 2, cy + 78);
-      ctx.fillStyle = th.sub; ctx.font = '600 22px Arial, sans-serif'; ctx.fillText('RAM', cx + cw / 2, cy + 112);
-      ctx.fillStyle = th.price; ctx.font = `800 ${n > 3 ? 60 : 76}px Arial, sans-serif`; ctx.fillText('₹' + t.price, cx + cw / 2, cy + 210);
-      ctx.fillStyle = th.sub; ctx.font = '600 24px Arial, sans-serif'; ctx.fillText('/ month', cx + cw / 2, cy + 250);
-    });
+    } else {
+      // cards (default)
+      const gap = 26, cy = 580, ch = 300, cw = (W - 2 * m - (n - 1) * gap) / n;
+      tiers.forEach((t, i) => {
+        const cx = m + i * (cw + gap), pop = t.popular;
+        rr(cx, cy, cw, ch, 24); ctx.fillStyle = th.cardBg; ctx.fill();
+        if (pop) {
+          ctx.strokeStyle = th.accent; ctx.lineWidth = 5; rr(cx, cy, cw, ch, 24); ctx.stroke();
+          rr(cx + cw / 2 - 70, cy - 20, 140, 40, 20); ctx.fillStyle = th.accent; ctx.fill();
+          ctx.fillStyle = '#0a2233'; ctx.font = '800 22px Arial, sans-serif'; ctx.fillText('POPULAR', cx + cw / 2, cy + 7);
+        } else if (th.cardBorder !== 'transparent') {
+          ctx.strokeStyle = th.cardBorder; ctx.lineWidth = 2; rr(cx, cy, cw, ch, 24); ctx.stroke();
+        }
+        ctx.fillStyle = th.ramInk; ctx.font = `800 ${n > 3 ? 34 : 40}px Arial, sans-serif`; ctx.fillText(t.ram, cx + cw / 2, cy + 78);
+        ctx.fillStyle = th.sub; ctx.font = '600 22px Arial, sans-serif'; ctx.fillText('RAM', cx + cw / 2, cy + 112);
+        ctx.fillStyle = th.price; ctx.font = `800 ${n > 3 ? 60 : 76}px Arial, sans-serif`; ctx.fillText('₹' + t.price, cx + cw / 2, cy + 210);
+        ctx.fillStyle = th.sub; ctx.font = '600 24px Arial, sans-serif'; ctx.fillText('/ month', cx + cw / 2, cy + 250);
+      });
+    }
 
     // series
     if (seriesArr.length) {
@@ -195,7 +251,7 @@ export default function PosterGeneratorPage() {
   }
 
   // redraw on any change
-  useEffect(() => { draw(); /* eslint-disable-next-line */ }, [design, title, subtitle, badge, location, series, features, website, phone, tiers, logoReady]);
+  useEffect(() => { draw(); /* eslint-disable-next-line */ }, [design, layout, title, subtitle, badge, location, series, features, website, phone, tiers, logoReady]);
 
   const download = () => {
     const canvas = canvasRef.current; if (!canvas) return;
@@ -220,7 +276,23 @@ export default function PosterGeneratorPage() {
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ImageIcon className="h-5 w-5 text-[#1560BD]" /> Content</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>Design</Label>
+              <Label>Layout style</Label>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {LAYOUTS.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setLayout(l.id)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${layout === l.id ? 'border-[#1560BD] bg-blue-50 text-[#1560BD]' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Colour theme</Label>
               <div className="mt-1.5 flex flex-wrap gap-2">
                 {THEMES.map((t, i) => (
                   <button
