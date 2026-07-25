@@ -927,6 +927,9 @@ export default function UsersPage() {
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
+      if (emailVerifiedFilter !== 'all') {
+        params.isEmailVerified = emailVerifiedFilter === 'verified' ? 'true' : 'false';
+      }
 
       const response = await getUsers(params) as UsersResponse;
       
@@ -959,7 +962,7 @@ export default function UsersPage() {
         setLoading(false);
       }
     }
-  }, [currentPage, searchTerm, statusFilter, usersPerPage, toast, calculateTodayNewUsers]);
+  }, [currentPage, searchTerm, statusFilter, emailVerifiedFilter, usersPerPage, toast, calculateTodayNewUsers]);
 
   // Initial fetch on mount
   useEffect(() => {
@@ -1045,24 +1048,10 @@ export default function UsersPage() {
     return Object.keys(errors).length === 0;
   };
 
-  // Calculate verified count from current users
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      const matchesSearch = searchTerm === '' || 
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone?.includes(searchTerm) ||
-        user.address?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-      
-      const matchesEmailVerification = emailVerifiedFilter === 'all' ||
-        (emailVerifiedFilter === 'verified' && user.isEmailVerified) ||
-        (emailVerifiedFilter === 'unverified' && !user.isEmailVerified);
-      
-      return matchesSearch && matchesStatus && matchesEmailVerification;
-    });
-  }, [users, searchTerm, statusFilter, emailVerifiedFilter]);
+  // Search, status and email-verification are all applied server-side now
+  // (see fetchUsers), so the table renders the server page as-is. Re-filtering
+  // here would drop matches on other pages and break the counts/pagination.
+  const filteredUsers = users;
 
   // Handle single user delete with confirmation modal
   const handleDeleteClick = (userId: string, userName: string) => {
@@ -1373,7 +1362,7 @@ export default function UsersPage() {
               
               <Select
                 value={statusFilter}
-                onValueChange={(value: 'all' | 'active' | 'inactive') => setStatusFilter(value)}
+                onValueChange={(value: 'all' | 'active' | 'inactive') => { setStatusFilter(value); setCurrentPage(1); }}
               >
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Status" />
@@ -1387,7 +1376,7 @@ export default function UsersPage() {
               
               <Select
                 value={emailVerifiedFilter}
-                onValueChange={(value: 'all' | 'verified' | 'unverified') => setEmailVerifiedFilter(value)}
+                onValueChange={(value: 'all' | 'verified' | 'unverified') => { setEmailVerifiedFilter(value); setCurrentPage(1); }}
               >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Email Verification" />

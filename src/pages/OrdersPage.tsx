@@ -192,6 +192,8 @@ const OrdersPage = () => {
       const params: any = { page: currentPage, limit: itemsPerPage };
       if (searchTerm) params.q = searchTerm;
       if (statusFilter !== 'all') params.orderStatus = statusFilter;
+      if (typeFilter !== 'all') params.planType = typeFilter;
+      if (paymentFilter !== 'all') params.paymentStatus = paymentFilter;
       if (renewOnly) params.renewRequested = 'true';
       const response = await getOrders(params);
       if (response) {
@@ -242,7 +244,7 @@ const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [currentPage, searchTerm, statusFilter, itemsPerPage, renewOnly]);
+  }, [currentPage, searchTerm, statusFilter, typeFilter, paymentFilter, itemsPerPage, renewOnly]);
 
   useEffect(() => {
     fetchUsers();
@@ -884,7 +886,7 @@ const OrdersPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by status" />
@@ -895,7 +897,7 @@ const OrdersPage = () => {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by type" />
@@ -907,7 +909,7 @@ const OrdersPage = () => {
                 <SelectItem value="dedicated">Dedicated</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by payment" />

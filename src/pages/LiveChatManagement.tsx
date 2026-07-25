@@ -225,15 +225,35 @@ const LiveChatManagement: React.FC = () => {
         chat.page_title.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || chat.chat_status === statusFilter;
-      const matchesOperator = operatorFilter === 'all' || chat.operator_id === operatorFilter;
+      const matchesOperator = operatorFilter === 'all'
+        ? true
+        : operatorFilter === 'unassigned'
+          ? !chat.operator_id
+          : chat.operator_id === operatorFilter;
       const matchesPriority = priorityFilter === 'all' || chat.priority === priorityFilter;
-      
-      return matchesSearch && matchesStatus && matchesOperator && matchesPriority;
+
+      let matchesDate = true;
+      if (dateFilter !== 'all' && chat.started_at) {
+        const d = new Date(chat.started_at);
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (dateFilter === 'today') matchesDate = d >= startOfToday;
+        else if (dateFilter === 'yesterday') {
+          const y = new Date(startOfToday); y.setDate(y.getDate() - 1);
+          matchesDate = d >= y && d < startOfToday;
+        } else if (dateFilter === 'week') {
+          const w = new Date(startOfToday); w.setDate(w.getDate() - 7); matchesDate = d >= w;
+        } else if (dateFilter === 'month') {
+          const m = new Date(startOfToday); m.setMonth(m.getMonth() - 1); matchesDate = d >= m;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesOperator && matchesPriority && matchesDate;
     });
-    
+
     setFilteredChats(filtered);
     setCurrentPage(1);
-  }, [chats, searchQuery, statusFilter, operatorFilter, priorityFilter]);
+  }, [chats, searchQuery, statusFilter, operatorFilter, priorityFilter, dateFilter]);
 
   // Status counts
   const statusCounts = {

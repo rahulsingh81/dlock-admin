@@ -4,6 +4,7 @@ export interface PaginationParams {
   search?: string;
   status?: string;
   filter?: string;
+  isEmailVerified?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
