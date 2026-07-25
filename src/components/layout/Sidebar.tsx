@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Server, Package, Ticket, UserCog, LogOut,
   Menu, X, ChevronLeft, ChevronRight, Network, FileText, Newspaper, Wallet, Bell, Settings, TicketPercent, Code2, Mail, FileSpreadsheet, Database,
-  CalendarClock, BarChart3, Megaphone, KeyRound,
+  CalendarClock, BarChart3, Megaphone, KeyRound, Image as ImageIcon,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useConfirm } from '@/components/confirm-provider';
@@ -36,6 +36,7 @@ const navGroups = [
     label: 'Marketing',
     items: [
       { name: 'Email Campaigns', href: '/campaigns', icon: Megaphone },
+      { name: 'Poster Maker', href: '/poster', icon: ImageIcon },
     ],
   },
   {

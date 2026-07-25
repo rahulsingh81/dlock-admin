@@ -28,6 +28,7 @@ import RenewalsExpiryPage from "@/pages/RenewalsExpiryPage"
 import ReportsPage from "@/pages/ReportsPage"
 import CampaignsPage from "@/pages/CampaignsPage"
 import DeveloperPage from "@/pages/DeveloperPage"
+import PosterGeneratorPage from "@/pages/PosterGeneratorPage"
 
 function App() {
   return (
@@ -128,6 +129,12 @@ function App() {
           <Route path="/coupons" element={
             <DashboardLayout>
               <CouponPage />
+            </DashboardLayout>
+          } />
+
+          <Route path="/poster" element={
+            <DashboardLayout>
+              <PosterGeneratorPage />
             </DashboardLayout>
           } />
 
