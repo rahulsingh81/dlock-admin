@@ -7,7 +7,66 @@ import { Download, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 
 type Tier = { ram: string; price: string; popular: boolean };
 
+type Theme = {
+  id: string; name: string; swatch: string;
+  bg: [string, string, string]; glow: string; frame: string;
+  headline: string; accent: string; seriesLabel: string;
+  badgeBg: string; badgeInk: string;
+  cardBg: string; cardBorder: string; ramInk: string; price: string; sub: string;
+  chipBg: string; chipBorder: string; chipInk: string;
+  feature: string; footer: string; footerSub: string;
+};
+
+const THEMES: Theme[] = [
+  {
+    id: 'ocean', name: 'Ocean Blue', swatch: 'linear-gradient(135deg,#0d3a73,#38bdf8)',
+    bg: ['#0d3a73', '#124f9c', '#0d3a73'], glow: 'rgba(56,189,248,.30)', frame: 'rgba(255,255,255,.14)',
+    headline: '#ffffff', accent: '#38bdf8', seriesLabel: '#9fd0f5',
+    badgeBg: '#f59e0b', badgeInk: '#3a2400',
+    cardBg: '#ffffff', cardBorder: 'transparent', ramInk: '#0d3a73', price: '#1560BD', sub: '#64748b',
+    chipBg: 'rgba(56,189,248,.16)', chipBorder: 'rgba(56,189,248,.5)', chipInk: '#d7ecfb',
+    feature: '#cfe0f8', footer: '#ffffff', footerSub: '#9fb4d6',
+  },
+  {
+    id: 'midnight', name: 'Midnight', swatch: 'linear-gradient(135deg,#0b1220,#22d3ee)',
+    bg: ['#0b1220', '#131c30', '#0b1220'], glow: 'rgba(34,211,238,.26)', frame: 'rgba(255,255,255,.12)',
+    headline: '#ffffff', accent: '#22d3ee', seriesLabel: '#67e8f9',
+    badgeBg: '#22d3ee', badgeInk: '#06222a',
+    cardBg: '#ffffff', cardBorder: 'transparent', ramInk: '#0b1220', price: '#0ea5e9', sub: '#64748b',
+    chipBg: 'rgba(34,211,238,.14)', chipBorder: 'rgba(34,211,238,.5)', chipInk: '#a5f3fc',
+    feature: '#cbd5e1', footer: '#ffffff', footerSub: '#94a3b8',
+  },
+  {
+    id: 'sunset', name: 'Sunset', swatch: 'linear-gradient(135deg,#7e22ce,#be185d)',
+    bg: ['#3b0764', '#7e22ce', '#be185d'], glow: 'rgba(251,191,36,.24)', frame: 'rgba(255,255,255,.16)',
+    headline: '#ffffff', accent: '#fcd34d', seriesLabel: '#f0abfc',
+    badgeBg: '#ef4444', badgeInk: '#ffffff',
+    cardBg: '#ffffff', cardBorder: 'transparent', ramInk: '#7e22ce', price: '#be185d', sub: '#6b7280',
+    chipBg: 'rgba(252,211,77,.16)', chipBorder: 'rgba(252,211,77,.55)', chipInk: '#fde68a',
+    feature: '#f5d0fe', footer: '#ffffff', footerSub: '#e9d5ff',
+  },
+  {
+    id: 'emerald', name: 'Emerald', swatch: 'linear-gradient(135deg,#065f46,#6ee7b7)',
+    bg: ['#064e3b', '#0f766e', '#065f46'], glow: 'rgba(52,211,153,.26)', frame: 'rgba(255,255,255,.14)',
+    headline: '#ffffff', accent: '#6ee7b7', seriesLabel: '#6ee7b7',
+    badgeBg: '#f59e0b', badgeInk: '#3a2400',
+    cardBg: '#ffffff', cardBorder: 'transparent', ramInk: '#065f46', price: '#0d9488', sub: '#64748b',
+    chipBg: 'rgba(110,231,183,.16)', chipBorder: 'rgba(110,231,183,.5)', chipInk: '#a7f3d0',
+    feature: '#ccfbf1', footer: '#ffffff', footerSub: '#99f6e4',
+  },
+  {
+    id: 'clean', name: 'Clean White', swatch: 'linear-gradient(135deg,#eef2f8,#1560BD)',
+    bg: ['#f8fafc', '#eef2f8', '#f1f5fb'], glow: 'rgba(21,96,189,.10)', frame: 'rgba(13,58,115,.12)',
+    headline: '#0d3a73', accent: '#1560BD', seriesLabel: '#1560BD',
+    badgeBg: '#f59e0b', badgeInk: '#3a2400',
+    cardBg: '#ffffff', cardBorder: '#e2e8f0', ramInk: '#0d3a73', price: '#1560BD', sub: '#64748b',
+    chipBg: 'rgba(21,96,189,.08)', chipBorder: 'rgba(21,96,189,.35)', chipInk: '#1560BD',
+    feature: '#475569', footer: '#0d3a73', footerSub: '#64748b',
+  },
+];
+
 export default function PosterGeneratorPage() {
+  const [design, setDesign] = useState(0);
   const [title, setTitle] = useState('IP SERIES');
   const [subtitle, setSubtitle] = useState('SPECIAL OFFER');
   const [badge, setBadge] = useState('VALID TILL 26th ONLY');
@@ -44,6 +103,7 @@ export default function PosterGeneratorPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const W = 1080, H = 1350;
+    const th = THEMES[design] || THEMES[0];
     const logo = logoRef.current;
     const seriesArr = series.split(',').map((s) => s.trim()).filter(Boolean);
 
@@ -55,33 +115,34 @@ export default function PosterGeneratorPage() {
 
     // background
     const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#0d3a73'); g.addColorStop(0.55, '#124f9c'); g.addColorStop(1, '#0d3a73');
+    g.addColorStop(0, th.bg[0]); g.addColorStop(0.55, th.bg[1]); g.addColorStop(1, th.bg[2]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     const glow = (x: number, y: number, r: number, col: string) => {
       const rg = ctx.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
     };
-    glow(120, 180, 420, 'rgba(56,189,248,.30)');
-    glow(980, 1180, 520, 'rgba(56,189,248,.20)');
-    ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 3; rr(28, 28, W - 56, H - 56, 34); ctx.stroke();
+    glow(120, 180, 420, th.glow);
+    glow(980, 1180, 520, th.glow);
+    ctx.strokeStyle = th.frame; ctx.lineWidth = 3; rr(28, 28, W - 56, H - 56, 34); ctx.stroke();
 
     ctx.textAlign = 'center';
 
-    // logo pill
+    // logo pill (always white so the dark logo is visible on any theme)
     const pw = 560, ph = 150, px = (W - pw) / 2, py = 70;
     rr(px, py, pw, ph, 30); ctx.fillStyle = '#ffffff'; ctx.fill();
+    if (th.cardBorder !== 'transparent') { ctx.strokeStyle = th.cardBorder; ctx.lineWidth = 2; rr(px, py, pw, ph, 30); ctx.stroke(); }
     if (logo) { let lw = 470, lh = lw * logo.height / logo.width; if (lh > ph - 40) { lh = ph - 40; lw = lh * logo.width / logo.height; } ctx.drawImage(logo, (W - lw) / 2, py + (ph - lh) / 2, lw, lh); }
 
     // headline
-    ctx.fillStyle = '#ffffff'; ctx.font = '800 104px Arial, sans-serif'; ctx.fillText(title || '', W / 2, 350);
-    ctx.fillStyle = '#38bdf8'; ctx.font = '800 62px Arial, sans-serif'; ctx.fillText(subtitle || '', W / 2, 428);
+    ctx.fillStyle = th.headline; ctx.font = '800 104px Arial, sans-serif'; ctx.fillText(title || '', W / 2, 350);
+    ctx.fillStyle = th.accent; ctx.font = '800 62px Arial, sans-serif'; ctx.fillText(subtitle || '', W / 2, 428);
 
     // badge
     if (badge.trim()) {
       ctx.font = '800 30px Arial, sans-serif';
       const bw = Math.min(760, ctx.measureText('⚡  ' + badge).width + 60), bh = 62, bx = (W - bw) / 2, by = 470;
-      rr(bx, by, bw, bh, 31); ctx.fillStyle = '#f59e0b'; ctx.fill();
-      ctx.fillStyle = '#3a2400'; ctx.fillText('⚡  ' + badge, W / 2, by + 42);
+      rr(bx, by, bw, bh, 31); ctx.fillStyle = th.badgeBg; ctx.fill();
+      ctx.fillStyle = th.badgeInk; ctx.fillText('⚡  ' + badge, W / 2, by + 42);
     }
 
     // price cards
@@ -89,21 +150,23 @@ export default function PosterGeneratorPage() {
     const cw = (W - 2 * m - (n - 1) * gap) / n;
     tiers.forEach((t, i) => {
       const cx = m + i * (cw + gap), pop = t.popular;
-      rr(cx, cy, cw, ch, 24); ctx.fillStyle = pop ? '#ffffff' : 'rgba(255,255,255,.94)'; ctx.fill();
+      rr(cx, cy, cw, ch, 24); ctx.fillStyle = th.cardBg; ctx.fill();
       if (pop) {
-        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 5; rr(cx, cy, cw, ch, 24); ctx.stroke();
-        rr(cx + cw / 2 - 70, cy - 20, 140, 40, 20); ctx.fillStyle = '#38bdf8'; ctx.fill();
-        ctx.fillStyle = '#083247'; ctx.font = '800 22px Arial, sans-serif'; ctx.fillText('POPULAR', cx + cw / 2, cy + 7);
+        ctx.strokeStyle = th.accent; ctx.lineWidth = 5; rr(cx, cy, cw, ch, 24); ctx.stroke();
+        rr(cx + cw / 2 - 70, cy - 20, 140, 40, 20); ctx.fillStyle = th.accent; ctx.fill();
+        ctx.fillStyle = '#0a2233'; ctx.font = '800 22px Arial, sans-serif'; ctx.fillText('POPULAR', cx + cw / 2, cy + 7);
+      } else if (th.cardBorder !== 'transparent') {
+        ctx.strokeStyle = th.cardBorder; ctx.lineWidth = 2; rr(cx, cy, cw, ch, 24); ctx.stroke();
       }
-      ctx.fillStyle = '#0d3a73'; ctx.font = `800 ${n > 3 ? 34 : 40}px Arial, sans-serif`; ctx.fillText(t.ram, cx + cw / 2, cy + 78);
-      ctx.fillStyle = '#64748b'; ctx.font = '600 22px Arial, sans-serif'; ctx.fillText('RAM', cx + cw / 2, cy + 112);
-      ctx.fillStyle = '#1560BD'; ctx.font = `800 ${n > 3 ? 60 : 76}px Arial, sans-serif`; ctx.fillText('₹' + t.price, cx + cw / 2, cy + 210);
-      ctx.fillStyle = '#64748b'; ctx.font = '600 24px Arial, sans-serif'; ctx.fillText('/ month', cx + cw / 2, cy + 250);
+      ctx.fillStyle = th.ramInk; ctx.font = `800 ${n > 3 ? 34 : 40}px Arial, sans-serif`; ctx.fillText(t.ram, cx + cw / 2, cy + 78);
+      ctx.fillStyle = th.sub; ctx.font = '600 22px Arial, sans-serif'; ctx.fillText('RAM', cx + cw / 2, cy + 112);
+      ctx.fillStyle = th.price; ctx.font = `800 ${n > 3 ? 60 : 76}px Arial, sans-serif`; ctx.fillText('₹' + t.price, cx + cw / 2, cy + 210);
+      ctx.fillStyle = th.sub; ctx.font = '600 24px Arial, sans-serif'; ctx.fillText('/ month', cx + cw / 2, cy + 250);
     });
 
     // series
     if (seriesArr.length) {
-      ctx.fillStyle = '#9fd0f5'; ctx.font = '700 26px Arial, sans-serif';
+      ctx.fillStyle = th.seriesLabel; ctx.font = '700 26px Arial, sans-serif';
       ctx.fillText(`AVAILABLE IP SERIES${location ? '  ·  ' + location : ''}`, W / 2, 985);
       ctx.font = '700 30px "Courier New", monospace';
       const chipH = 52, padX = 26, gapX = 18, rowGapY = 16, maxW = W - 2 * 70, chipY = 1015;
@@ -116,23 +179,23 @@ export default function PosterGeneratorPage() {
       rows.forEach((row, r0) => {
         const total = rowW[r0] - gapX; let sx = (W - total) / 2; const yy = chipY + r0 * (chipH + rowGapY);
         row.forEach(([label, twc]) => {
-          rr(sx, yy, twc, chipH, 26); ctx.fillStyle = 'rgba(56,189,248,.16)'; ctx.fill();
-          ctx.strokeStyle = 'rgba(56,189,248,.5)'; ctx.lineWidth = 2; rr(sx, yy, twc, chipH, 26); ctx.stroke();
-          ctx.fillStyle = '#d7ecfb'; ctx.textAlign = 'center'; ctx.font = '700 30px "Courier New", monospace';
+          rr(sx, yy, twc, chipH, 26); ctx.fillStyle = th.chipBg; ctx.fill();
+          ctx.strokeStyle = th.chipBorder; ctx.lineWidth = 2; rr(sx, yy, twc, chipH, 26); ctx.stroke();
+          ctx.fillStyle = th.chipInk; ctx.textAlign = 'center'; ctx.font = '700 30px "Courier New", monospace';
           ctx.fillText(label, sx + twc / 2, yy + 35); sx += twc + gapX;
         });
       });
     }
 
     // features
-    if (features.trim()) { ctx.textAlign = 'center'; ctx.fillStyle = '#cfe0f8'; ctx.font = '700 26px Arial, sans-serif'; ctx.fillText(features, W / 2, 1190); }
+    if (features.trim()) { ctx.textAlign = 'center'; ctx.fillStyle = th.feature; ctx.font = '700 26px Arial, sans-serif'; ctx.fillText(features, W / 2, 1190); }
     // footer
-    ctx.fillStyle = '#ffffff'; ctx.font = '800 40px Arial, sans-serif'; ctx.fillText(website || '', W / 2, 1258);
-    ctx.fillStyle = '#9fb4d6'; ctx.font = '600 26px Arial, sans-serif'; ctx.fillText(`📞  ${phone}   ·   Order online today`, W / 2, 1300);
+    ctx.fillStyle = th.footer; ctx.font = '800 40px Arial, sans-serif'; ctx.fillText(website || '', W / 2, 1258);
+    ctx.fillStyle = th.footerSub; ctx.font = '600 26px Arial, sans-serif'; ctx.fillText(`📞  ${phone}   ·   Order online today`, W / 2, 1300);
   }
 
   // redraw on any change
-  useEffect(() => { draw(); /* eslint-disable-next-line */ }, [title, subtitle, badge, location, series, features, website, phone, tiers, logoReady]);
+  useEffect(() => { draw(); /* eslint-disable-next-line */ }, [design, title, subtitle, badge, location, series, features, website, phone, tiers, logoReady]);
 
   const download = () => {
     const canvas = canvasRef.current; if (!canvas) return;
@@ -156,6 +219,24 @@ export default function PosterGeneratorPage() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ImageIcon className="h-5 w-5 text-[#1560BD]" /> Content</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label>Design</Label>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {THEMES.map((t, i) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setDesign(i)}
+                    title={t.name}
+                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${design === i ? 'border-[#1560BD] bg-blue-50 text-[#1560BD]' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <span className="h-4 w-4 rounded-full ring-1 ring-black/10" style={{ background: t.swatch }} />
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div><Label>Heading</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
               <div><Label>Sub-heading</Label><Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} /></div>
