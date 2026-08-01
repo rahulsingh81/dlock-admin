@@ -81,7 +81,7 @@ export default function PosterGeneratorPage() {
   const [series, setSeries] = useState('74.0.x, 163.61.x, 103.178.x, 103.98.x, 103.163.x, 162.4.x, 138.252.x');
   const [features, setFeatures] = useState('NVMe SSD · DDoS Protected · 99.99% Uptime · 24/7 Support');
   const [website, setWebsite] = useState('dlockservices.com');
-  const [phone, setPhone] = useState('+91-8302574035');
+  const [phone, setPhone] = useState('+91-8503023131');
   const [tiers, setTiers] = useState<Tier[]>([
     { ram: '4 GB', price: '549', popular: false },
     { ram: '8 GB', price: '999', popular: true },

@@ -16,7 +16,7 @@ const COMPANY = {
   name: 'Dlock Services',
   line: 'Hosting · Cloud · Development',
   email: 'info@dlockservices.com',
-  phone: '+91 8302574035',
+  phone: '+91 8503023131',
   gstin: '08XXXXX0000X1ZX',
 };
 
