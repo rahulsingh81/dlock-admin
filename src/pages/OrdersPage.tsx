@@ -149,6 +149,8 @@ const OrdersPage = () => {
     basePrice: 0,
     gstAmount: 0,
     totalPrice: 0,
+    couponCode: '',
+    discountAmount: 0,
     orderStatus: 'active',
     paymentStatus: 'unpaid',
     deliveryStatus: 'processing',
@@ -308,6 +310,8 @@ const OrdersPage = () => {
         basePrice: order.basePrice || 0,
         gstAmount: order.gstAmount || 0,
         totalPrice: order.totalPrice || 0,
+        couponCode: order.couponCode || '',
+        discountAmount: Number(order.discountAmount || 0),
         orderStatus: order.orderStatus || 'active',
         paymentStatus: order.paymentStatus || 'unpaid',
         deliveryStatus: order.deliveryStatus || 'processing',
@@ -569,11 +573,16 @@ const OrdersPage = () => {
     const disc = formData.durationMode === 'custom' ? 0 : durationDiscount(months);
     if (disc > 0) subtotal = subtotal - (subtotal * disc) / 100;
     subtotal = Math.round(subtotal * 100) / 100;
-    const gst = Math.round(subtotal * 0.18 * 100) / 100;
-    const total = Math.round((subtotal + gst) * 100) / 100;
+    // The coupon applied at checkout comes off BEFORE GST — exactly how the
+    // customer checkout computes it. Without this the coupon silently vanished
+    // from the totals the moment an admin touched price / qty / duration.
+    const couponDiscount = Math.max(0, Number(formData.discountAmount) || 0);
+    const taxable = Math.max(0, Math.round((subtotal - couponDiscount) * 100) / 100);
+    const gst = Math.round(taxable * 0.18 * 100) / 100;
+    const total = Math.round((taxable + gst) * 100) / 100;
     setFormData((prev: any) => (prev.gstAmount === gst && prev.totalPrice === total ? prev : { ...prev, gstAmount: gst, totalPrice: total }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.basePrice, formData.quantity, formData.duration, formData.durationMode, formData.customStart, formData.customEnd]);
+  }, [formData.basePrice, formData.quantity, formData.duration, formData.durationMode, formData.customStart, formData.customEnd, formData.discountAmount]);
 
   const getTypeColor = (type) => {
     switch (type) {
@@ -1371,6 +1380,25 @@ const OrdersPage = () => {
                   </p>
                 </div>
                 <div>
+                  <Label>Coupon Applied</Label>
+                  <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm">
+                    {formData.couponCode
+                      ? <span className="rounded bg-emerald-100 px-2 py-0.5 font-mono text-xs font-bold uppercase text-emerald-700">{formData.couponCode}</span>
+                      : <span className="text-slate-400">No coupon</span>}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">Applied by the customer at checkout.</p>
+                </div>
+                <div>
+                  <Label>Discount Amount ({curSym(formData.location)}, editable)</Label>
+                  <Input
+                    type="number"
+                    value={formData.discountAmount === 0 ? '' : formData.discountAmount}
+                    onChange={e => setFormData({ ...formData, discountAmount: e.target.value === '' ? 0 : safeParseFloat(e.target.value) })}
+                    placeholder="0.00"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">Deducted before GST. Set to 0 to drop the discount.</p>
+                </div>
+                <div>
                   <Label>GST Amount ({curSym(formData.location)}, editable)</Label>
                   <Input
                     type="number"
@@ -1388,6 +1416,31 @@ const OrdersPage = () => {
                     placeholder="0.00"
                   />
                 </div>
+                {(() => {
+                  const b = Number(formData.basePrice) || 0;
+                  const q = Number(formData.quantity) || 1;
+                  const m = effectiveMonths;
+                  let sub = b * q * m;
+                  const dd = formData.durationMode === 'custom' ? 0 : durationDiscount(m);
+                  if (dd > 0) sub = sub - (sub * dd) / 100;
+                  sub = Math.round(sub * 100) / 100;
+                  const cd = Math.max(0, Number(formData.discountAmount) || 0);
+                  const tx = Math.max(0, Math.round((sub - cd) * 100) / 100);
+                  const sym = curSym(formData.location);
+                  const n = (v: number) => Number(v || 0).toLocaleString('en-IN');
+                  return (
+                    <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+                      <span className="font-semibold text-slate-700">How this total is built: </span>
+                      {sym}{n(b)} x {q} x {m}mo = {sym}{n(sub)}
+                      {dd > 0 ? ` (after ${dd}% duration discount)` : ''}
+                      {cd > 0
+                        ? <span className="text-emerald-700 font-semibold"> - {sym}{n(cd)} coupon{formData.couponCode ? ` (${formData.couponCode})` : ''}</span>
+                        : null}
+                      {' = taxable '}{sym}{n(tx)}{' + GST '}{sym}{n(Number(formData.gstAmount))}
+                      {' = '}<span className="font-bold text-slate-900">{sym}{n(Number(formData.totalPrice))}</span>
+                    </div>
+                  );
+                })()}
 
                 <div className="col-span-2 mt-2 border-t border-slate-100 pt-3 text-sm font-semibold text-slate-800">Status</div>
                 <div>
