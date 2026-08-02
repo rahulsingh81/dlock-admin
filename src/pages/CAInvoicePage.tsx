@@ -17,7 +17,7 @@ const COMPANY = {
   line: 'Hosting · Cloud · Development',
   email: 'info@dlockservices.com',
   phone: '+91 8503023131',
-  gstin: '08XXXXX0000X1ZX',
+  gstin: '08CASPJ9257N1ZM',
 };
 
 export default function CAInvoicePage() {

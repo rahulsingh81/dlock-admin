@@ -694,7 +694,7 @@ const OrdersPage = () => {
           <div>
             <img class="logo" src="${logo}" alt="Dlock Services" onerror="this.style.display='none'"/>
             <div class="company">Dlock Services</div>
-            <div class="muted" style="margin-top:6px">Hosting · Cloud · Development<br/>info@dlockservices.com<br/>+91 8503023131<br/>GSTIN: 08XXXXX0000X1ZX</div>
+            <div class="muted" style="margin-top:6px">Hosting · Cloud · Development<br/>info@dlockservices.com<br/>+91 8503023131<br/>GSTIN: 08CASPJ9257N1ZM</div>
           </div>
           <div>
             <div class="title">TAX INVOICE${isCa ? ' (CA COPY)' : ''}</div>
