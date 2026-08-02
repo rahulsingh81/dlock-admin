@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Server, Package, Ticket, UserCog, LogOut,
-  Menu, X, ChevronLeft, ChevronRight, Network, FileText, Newspaper, Wallet, Bell, Settings, TicketPercent, Code2, Mail, FileSpreadsheet, Database,
+  X, ChevronLeft, ChevronRight, Network, FileText, Newspaper, Wallet, Bell, Settings, TicketPercent, Code2, Mail, FileSpreadsheet, Database,
   CalendarClock, BarChart3, Megaphone, KeyRound, Image as ImageIcon,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
@@ -110,15 +110,6 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProp
 
   return (
     <>
-      {/* Mobile Hamburger Button */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 rounded-xl bg-gradient-to-r from-[#1560BD] to-[#0d3a73] p-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none lg:hidden"
-        aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        {isOpen ? <X size={22} /> : <Menu size={22} />}
-      </button>
-
       {/* Overlay for mobile */}
       {isOpen && (
         <div
@@ -154,10 +145,17 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose }: SidebarProp
           )}
           <button
             onClick={toggleCollapse}
-            className={`rounded-lg p-2 text-blue-100 transition-all duration-300 hover:bg-white/10 hover:text-white ${isCollapsed ? 'mx-auto' : ''}`}
+            className={`hidden rounded-lg p-2 text-blue-100 transition-all duration-300 hover:bg-white/10 hover:text-white lg:block ${isCollapsed ? 'mx-auto' : ''}`}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
+          <button
+            onClick={toggleSidebar}
+            className="rounded-lg p-2 text-blue-100 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+            aria-label="Close sidebar"
+          >
+            <X size={22} />
           </button>
         </div>
 
