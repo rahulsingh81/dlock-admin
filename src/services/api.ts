@@ -165,6 +165,7 @@ export const sendBroadcast = async (data: { subject: string; message: string; se
 // ==================== PAYMENTS / TRANSACTIONS ====================
 export const getPaymentSettings = async () => handle(client.get('/admin/payment/settings'));
 export const updatePaymentSettings = async (data: any) => handle(client.put('/admin/payment/settings', data));
+export const testPhonePe = async () => handle(client.post('/admin/payment/phonepe/test', {}));
 export const getTransactions = async (params?: any) => handle(client.get('/admin/transactions', { params }));
 export const refundTransaction = async (id: string, amount?: number, note?: string) =>
   handle(client.post(`/admin/transactions/${id}/refund`, { amount, note }));

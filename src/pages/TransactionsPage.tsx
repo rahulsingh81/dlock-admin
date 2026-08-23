@@ -171,8 +171,8 @@ export default function TransactionsPage() {
                   <td className="px-4 py-4"><SelectCheck ariaLabel="Select transaction" checked={bulk.selected.has(t._id)} onChange={() => bulk.toggle(t._id)} /></td>
                   <td className="px-6 py-4 font-mono text-xs text-slate-700">
                     <div className="font-semibold text-slate-800">{t.orderId}</div>
-                    {t.cfPaymentId && <div className="text-[11px] text-slate-400">Pay ID: {t.cfPaymentId}</div>}
-                    {t.cfOrderId && <div className="text-[11px] text-slate-400">CF: {t.cfOrderId}</div>}
+                    {(t.cfPaymentId || t.providerPaymentId) && <div className="text-[11px] text-slate-400">Pay ID: {t.cfPaymentId || t.providerPaymentId}</div>}
+                    {(t.cfOrderId || t.providerOrderId) && <div className="text-[11px] text-slate-400">{t.gateway === 'phonepe' ? 'PP' : 'CF'}: {t.cfOrderId || t.providerOrderId}</div>}
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-slate-900">{t.customerName || '—'}</div>
@@ -212,7 +212,7 @@ export default function TransactionsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Undo2 className="h-5 w-5 text-rose-600" /> Refund payment</DialogTitle>
             <DialogDescription>
-              This will refund the customer via Cashfree. This action cannot be undone.
+              This will refund the customer via {refundTxn?.gateway === 'phonepe' ? 'PhonePe' : 'Cashfree'}. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           {refundTxn && (
