@@ -653,7 +653,7 @@ const OrdersPage = () => {
     const renewStr = fmtInv(svcRenew);
     const expiryStr = fmtInv(svcExpiry);
     const periodStr = svcStart && svcExpiry ? `${fmtInv(svcStart)} — ${fmtInv(svcExpiry)}` : '';
-    const invId = `INV-${String(order._id).slice(-8).toUpperCase()}`;
+    const invId = order.invoiceNumber || `INV-${String(order._id).slice(-8).toUpperCase()}`;
     const cust = order.userId || {};
     const cd = order.customerDetails || {};
     const custName = cust.name || cd.fullName || '—';
